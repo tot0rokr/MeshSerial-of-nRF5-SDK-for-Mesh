@@ -1,0 +1,8 @@
+# IDE files
+cscope.list
+cscope.out
+tags
+
+# object and dependency files
+build/
+*.jlink
