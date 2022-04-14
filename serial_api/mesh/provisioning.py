@@ -302,9 +302,11 @@ class Provisioner(ProvDevice):
         if event._opcode == Event.PROV_UNPROVISIONED_RECEIVED:
             uuid = event._data["uuid"]
             rssi = event._data["rssi"]
+            adv_addr_type = event._data["adv_addr_type"]
+            adv_addr = event._data["adv_addr"][::-1].hex()
             if uuid not in self.unprov_list:
                 self.logger.info(
-                    "Received UUID {} with RSSI: {} dB".format(uuid.hex(), rssi))
+                    "Received UUID {} with RSSI: {} dB, MAC addr({}): {} ".format(uuid.hex(), rssi, adv_addr_type, adv_addr))
                 self.unprov_list.append(uuid)
 
         elif event._opcode == Event.PROV_CAPS_RECEIVED:
