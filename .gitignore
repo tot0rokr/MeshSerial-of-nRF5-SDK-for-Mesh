@@ -1,3 +1,6 @@
+# Test dedicated files
+test_database.json
+
 # IDE files
 cscope.list
 cscope.out
