@@ -155,6 +155,10 @@
 #define SERIAL_OPCODE_CMD_MESH_CONFIG_SERVER_BIND             (0xAD) /**< Params: @ref serial_cmd_mesh_config_server_devkey_bind_t */
 #define SERIAL_OPCODE_CMD_MESH_NET_STATE_SET                  (0xAE) /**< Params: @ref serial_cmd_mesh_net_state_set_t */
 #define SERIAL_OPCODE_CMD_MESH_NET_STATE_GET                  (0xAF) /**< Params: None. */
+#define SERIAL_OPCODE_CMD_MESH_HB_PUBLICATION_GET             (0xB0) /**< Params: None. */
+#define SERIAL_OPCODE_CMD_MESH_HB_PUBLICATION_SET             (0xB1)
+#define SERIAL_OPCODE_CMD_MESH_HB_SUBSCRIPTION_GET            (0xB2) /**< Params: None. */
+#define SERIAL_OPCODE_CMD_MESH_HB_SUBSCRIPTION_SET            (0xB3)
 #define SERIAL_OPCODE_CMD_RANGE_MESH_END                      (0xBF) /**< MESH range end. */
 
 #define SERIAL_OPCODE_CMD_RANGE_DFU_START                     (0xD0) /**< DFU range start. */
@@ -518,6 +522,36 @@ typedef struct __attribute((packed))
     uint32_t  next_seqnum_block; /**< The first sequence number block which is not yet allocated. */
 } serial_cmd_mesh_net_state_set_t;
 
+/** Heartbeat publication set command parameters */
+typedef struct __attribute((packed))
+{
+    uint16_t  dst; /**< The destination to send heartbeat messages.*/
+    uint32_t  count; /**< How many messages to send.*/
+    uint32_t  period; /**< What interval to send messages.*/
+    uint8_t   ttl; /**< Initial TTL.*/
+    uint16_t  features; /**< The features that trigger sending messages when changed.*/
+    uint16_t  netkey_index; /**< The global NetKey Index of the Netkey used to send.*/
+} serial_cmd_mesh_hb_publication_set_t;
+
+/** Heartbeat subscription set command parameters */
+typedef struct __attribute((packed))
+{
+    uint16_t  src; /**< The unicast source address for messages a node shall process.*/
+    uint16_t  dst; /**< The destination to receive heartbeat messages.*/
+    uint32_t  period; /**< The number of seconds left for processing messages.*/
+} serial_cmd_mesh_hb_subscription_set_t;
+
+/** Heartbeat subscription get command parameters */
+typedef struct __attribute((packed))
+{
+    uint16_t  src; /**< The unicast source address for messages a node shall process.*/
+    uint16_t  dst; /**< The destination to receive heartbeat messages.*/
+    uint8_t  period_log; /**< The number of seconds left for processing messages.*/
+    uint8_t  count_log; /**< The number of periodical messages received.*/
+    uint16_t  min_hops; /**< The minimum hops value registered when receiving messages.*/
+    uint16_t  max_hops; /**< The maximum hops value registered when receiving messages.*/
+} serial_cmd_mesh_hb_subscription_get_t;
+
 /** Mesh command parameters. */
 typedef union __attribute((packed))
 {
@@ -549,6 +583,14 @@ typedef union __attribute((packed))
     serial_cmd_mesh_packet_send_t                   packet_send;                   /**< Packet send parameters. */
     serial_cmd_mesh_config_server_devkey_bind_t     config_server_devkey_bind;     /**< Configuration Server: device key bind parameters. */
     serial_cmd_mesh_net_state_set_t                 net_state_set;                 /**< Net state set parameters */
+    serial_cmd_mesh_hb_publication_set_t            hb_publication_set;            /**< Heartbeat Publication set parameters */
+    /*
+     * serial_cmd_mesh_hb_publication_get_t            hb_publication_get;            [>*< Heartbeat Publication get parameters <]
+     */
+    /*
+     * serial_cmd_mesh_hb_subscription_set_t           hb_subscription_set;           [>*< Heartbeat Subscription set parameters <]
+     * serial_cmd_mesh_hb_subscription_get_t           hb_subscription_get;           [>*< Heartbeat Subscription get parameters <]
+     */
 } serial_cmd_mesh_t;
 
 /* **** PB-MESH Client **** */

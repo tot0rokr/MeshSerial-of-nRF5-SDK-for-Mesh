@@ -54,6 +54,7 @@
 #include "mesh_opt_net_state.h"
 #include "mesh_config_entry.h"
 #include "mesh_config_listener.h"
+#include "heartbeat.h"
 
 /* Ensure that we're mapping the size of the serial parameter to the
  * dsm_handle_t. If this triggers, someone changed the size of the
@@ -488,6 +489,117 @@ static void handle_net_state_get(const serial_packet_t * p_cmd)
     serial_handler_common_cmd_rsp_nodata_on_error(p_cmd->opcode, status, (uint8_t *)&rsp, sizeof(rsp));
 }
 
+static inline uint32_t heartbeat_publication_count_decode(uint8_t count_log)
+{
+    if (count_log == 0x00)
+    {
+        return 0x00;
+    }
+    else if (count_log <= HEARTBEAT_MAX_COUNT_LOG)
+    {
+        return (1 << (count_log - 1));
+    }
+    else if (count_log == HEARTBEAT_INF_COUNT_LOG)
+    {
+        return HEARTBEAT_INF_COUNT;
+    }
+    else
+    {
+        return HEARTBEAT_INVALID_COUNT;
+    }
+}
+
+static inline uint32_t heartbeat_pubsub_period_decode(uint8_t period_log)
+{
+    if (period_log == 0x00)
+    {
+        return 0x00;
+    }
+    else if (period_log <= HEARTBEAT_MAX_PERIOD_LOG)
+    {
+        return (1 << (period_log - 1));
+    }
+    else
+    {
+        return HEARTBEAT_INVALID_PERIOD;
+    }
+}
+
+static inline uint8_t heartbeat_pubsub_period_encode(uint32_t period)
+{
+    if (period == 0)
+    {
+        return 0x00;
+    }
+    else if (period <= HEARTBEAT_MAX_PERIOD)
+    {
+        return (log2_get(period) + 1);
+    }
+    else
+    {
+        NRF_MESH_ASSERT(false);
+        return HEARTBEAT_MAX_PERIOD_LOG;
+    }
+}
+
+static inline uint8_t heartbeat_publication_count_encode(uint32_t count)
+{
+    if (count <= 1)
+    {
+        return count;
+    }
+    else if (count <= HEARTBEAT_MAX_COUNT)
+    {
+        /* Finding smallest n where 2^(n-1) is greater than or equal to the count value */
+        return (log2_get(count - 1) + 1 + 1);
+    }
+    else if (count == HEARTBEAT_INF_COUNT)
+    {
+        return HEARTBEAT_INF_COUNT_LOG;
+    }
+    else
+    {
+        NRF_MESH_ASSERT(false);
+        return HEARTBEAT_MAX_COUNT_LOG;
+    }
+}
+
+static inline uint8_t heartbeat_subscription_count_encode(uint32_t count)
+{
+    if (count == 0)
+    {
+        return 0x00;
+    }
+    else if (count <= HEARTBEAT_MAX_COUNT)
+    {
+        /* Finding largest n where 2^(n-1) is less than or equal to the count value */
+        return (log2_get(count) + 1);
+    }
+    else if (count == HEARTBEAT_INF_COUNT)
+    {
+        return HEARTBEAT_INF_COUNT_LOG;
+    }
+    else
+    {
+        NRF_MESH_ASSERT(false);
+        return HEARTBEAT_MAX_COUNT_LOG;
+    }
+}
+
+static void handle_heartbeat_publication_get(const serial_packet_t * p_cmd)
+{
+    const heartbeat_publication_state_t * p_hb_pub = heartbeat_publication_get();
+    serial_evt_cmd_rsp_data_hb_publication_get_t rsp = {
+        .dst = p_hb_pub->dst,
+        .count_log = heartbeat_publication_count_encode(p_hb_pub->count),
+        .period_log = heartbeat_pubsub_period_encode(p_hb_pub->period),
+        .ttl = p_hb_pub->ttl,
+        .features = p_hb_pub->features,
+        .netkey_index = p_hb_pub->netkey_index
+    };
+    serial_cmd_rsp_send(p_cmd->opcode, SERIAL_STATUS_SUCCESS, (uint8_t *)&rsp, sizeof(rsp));
+}
+
 /*****************************************************************************
 * Static functions
 *****************************************************************************/
@@ -527,7 +639,13 @@ static const mesh_serial_cmd_handler_t m_handlers[] =
     {SERIAL_OPCODE_CMD_MESH_STATE_CLEAR,                    0,                                                       0,  handle_cmd_clear},
     {SERIAL_OPCODE_CMD_MESH_CONFIG_SERVER_BIND,             sizeof(serial_cmd_mesh_config_server_devkey_bind_t),     0,  handle_config_devkey_bind},
     {SERIAL_OPCODE_CMD_MESH_NET_STATE_SET,                  sizeof(serial_cmd_mesh_net_state_set_t),                 0,  handle_net_state_set},
-    {SERIAL_OPCODE_CMD_MESH_NET_STATE_GET,                  0,                                                       0,  handle_net_state_get}
+    {SERIAL_OPCODE_CMD_MESH_NET_STATE_GET,                  0,                                                       0,  handle_net_state_get},
+    {SERIAL_OPCODE_CMD_MESH_HB_PUBLICATION_GET,             0,                                                       0,  handle_heartbeat_publication_get}
+    /*
+     * {SERIAL_OPCODE_CMD_MESH_HB_PUBLICATION_SET,             sizeof(serial_cmd_mesh_hb_publication_set_t),            0,  handle_heartbeat_publication_set},
+     * {SERIAL_OPCODE_CMD_MESH_HB_SUBSCRIPTION_GET,            sizeof(serial_cmd_mesh_hb_subscription_get_t),           0,  handle_heartbeat_subscription_get},
+     * {SERIAL_OPCODE_CMD_MESH_HB_SUBSCRIPTION_SET,            sizeof(serial_cmd_mesh_hb_subscription_set_t),           0,  handle_heartbeat_subscription_set}
+     */
 };
 
 static void mesh_config_listener_cb(mesh_config_change_reason_t reason, mesh_config_entry_id_t id, const void * p_entry)

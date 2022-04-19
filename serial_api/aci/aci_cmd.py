@@ -968,6 +968,12 @@ class NetStateGet(CommandPacket):
         __data = bytearray()
         super(NetStateGet, self).__init__(0xAF, __data)
 
+class HBPublicationGet(CommandPacket):
+    """Gets the Heartbeat Publication state"""
+    def __init__(self):
+        __data = bytearray()
+        super(HBPublicationGet, self).__init__(0xB0, __data)
+
 
 class JumpToBootloader(CommandPacket):
     """Immediately jump to bootloader mode."""
@@ -1740,6 +1746,18 @@ class NetStateGetRsp(ResponsePacket):
         __data["next_seqnum_block"], = struct.unpack("<I", raw_data[7:11])
         super(NetStateGetRsp, self).__init__("NetStateGet", 0xAF, __data)
 
+class HBPublicationGetRsp(ResponsePacket):
+    """Response to a(n) HHPublicationGet command."""
+    def __init__(self, raw_data):
+        __data = {}
+        __data["dst"], = struct.unpack("<H", raw_data[0:2])
+        __data["count_log"], = struct.unpack("<B", raw_data[2:3])
+        __data["period_log"], = struct.unpack("<B", raw_data[3:4])
+        __data["ttl"], = struct.unpack("<B", raw_data[4:5])
+        __data["features"], = struct.unpack("<H", raw_data[5:7])
+        __data["netkey_index"], = struct.unpack("<H", raw_data[7:9])
+        super(HBPublicationGetRsp, self).__init__("HBPublicationGet", 0xB0, __data)
+
 
 class BankInfoGetRsp(ResponsePacket):
     """Response to a(n) BankInfoGet command."""
@@ -1930,6 +1948,7 @@ RESPONSE_LUT = {
     0xA6: {"object": AddrPublicationRemoveRsp, "name": "AddrPublicationRemove"},
     0xAB: {"object": PacketSendRsp, "name": "PacketSend"},
     0xAF: {"object": NetStateGetRsp, "name": "NetStateGet"},
+    0xB0: {"object": HBPublicationGetRsp, "name": "HBPublicationGet"},
     0xD4: {"object": BankInfoGetRsp, "name": "BankInfoGet"},
     0xD6: {"object": StateGetRsp, "name": "StateGet"},
     0xE1: {"object": ModelPubAddrGetRsp, "name": "ModelPubAddrGet"},

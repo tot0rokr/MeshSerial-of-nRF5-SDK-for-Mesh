@@ -309,6 +309,17 @@ typedef struct __attribute((packed))
     uint32_t  next_seqnum_block; /**< The start of the next unused sequence number block. */
 } serial_evt_cmd_rsp_data_net_state_get_t;
 
+/** Command response to @ref SERIAL_OPCODE_CMD_MESH_HB_PUBLICATION_GET with the current heartbeat publication state */
+typedef struct __attribute((packed))
+{
+    uint16_t  dst; /**< The destination to send heartbeat messages.*/
+    uint8_t  count_log; /**< How many messages to send.*/
+    uint8_t  period_log; /**< What interval to send messages.*/
+    uint8_t   ttl; /**< Initial TTL.*/
+    uint16_t  features; /**< The features that trigger sending messages when changed.*/
+    uint16_t  netkey_index; /**< The global NetKey Index of the Netkey used to send.*/
+} serial_evt_cmd_rsp_data_hb_publication_get_t;
+
 /** Command response packet. */
 typedef struct __attribute((packed))
 {
@@ -348,7 +359,7 @@ typedef struct __attribute((packed))
         serial_evt_cmd_rsp_data_model_init_t           model_init;     /**< Reserved handle for the initialized model instance. */
         serial_evt_cmd_rsp_data_packet_send_t          packet_send;    /**< Information about the sent packet. */
         serial_evt_cmd_rsp_data_net_state_get_t        net_state_get;  /**< Net state. */
-
+        serial_evt_cmd_rsp_data_hb_publication_get_t   hb_publication_get; /**< Heartbeat Publication States. */
     } data; /**< Optional command response data. */
 } serial_evt_cmd_rsp_t;
 
