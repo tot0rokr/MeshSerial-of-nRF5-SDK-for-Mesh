@@ -489,42 +489,6 @@ static void handle_net_state_get(const serial_packet_t * p_cmd)
     serial_handler_common_cmd_rsp_nodata_on_error(p_cmd->opcode, status, (uint8_t *)&rsp, sizeof(rsp));
 }
 
-static inline uint32_t heartbeat_publication_count_decode(uint8_t count_log)
-{
-    if (count_log == 0x00)
-    {
-        return 0x00;
-    }
-    else if (count_log <= HEARTBEAT_MAX_COUNT_LOG)
-    {
-        return (1 << (count_log - 1));
-    }
-    else if (count_log == HEARTBEAT_INF_COUNT_LOG)
-    {
-        return HEARTBEAT_INF_COUNT;
-    }
-    else
-    {
-        return HEARTBEAT_INVALID_COUNT;
-    }
-}
-
-static inline uint32_t heartbeat_pubsub_period_decode(uint8_t period_log)
-{
-    if (period_log == 0x00)
-    {
-        return 0x00;
-    }
-    else if (period_log <= HEARTBEAT_MAX_PERIOD_LOG)
-    {
-        return (1 << (period_log - 1));
-    }
-    else
-    {
-        return HEARTBEAT_INVALID_PERIOD;
-    }
-}
-
 static inline uint8_t heartbeat_pubsub_period_encode(uint32_t period)
 {
     if (period == 0)
@@ -649,7 +613,18 @@ static void handle_heartbeat_subscription_get(const serial_packet_t * p_cmd)
     }
     serial_cmd_rsp_send(p_cmd->opcode, SERIAL_STATUS_SUCCESS, (uint8_t *)&rsp, sizeof(rsp));
 }
-static void handle_heartbeat_subscription_set(const serial_packet_t * p_cmd) {}
+static void handle_heartbeat_subscription_set(const serial_packet_t * p_cmd)
+{
+    uint32_t status;
+    const heartbeat_subscription_state_t hb_sub = {
+        .src    = p_cmd->payload.cmd.mesh.hb_subscription_set.src,
+        .dst    = p_cmd->payload.cmd.mesh.hb_subscription_set.dst,
+        .period = p_cmd->payload.cmd.mesh.hb_subscription_set.period,
+        /* other state values shall remain unchanged, see @tagMeshSp section 4.4.1.2.16 */
+    };
+    status = heartbeat_subscription_set(&hb_sub);
+    serial_handler_common_cmd_rsp_nodata_on_error(p_cmd->opcode, status, NULL, 0);
+}
 
 /*****************************************************************************
 * Static functions

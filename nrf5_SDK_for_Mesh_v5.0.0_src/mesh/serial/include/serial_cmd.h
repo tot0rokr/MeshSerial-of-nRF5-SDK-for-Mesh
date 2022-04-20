@@ -156,9 +156,9 @@
 #define SERIAL_OPCODE_CMD_MESH_NET_STATE_SET                  (0xAE) /**< Params: @ref serial_cmd_mesh_net_state_set_t */
 #define SERIAL_OPCODE_CMD_MESH_NET_STATE_GET                  (0xAF) /**< Params: None. */
 #define SERIAL_OPCODE_CMD_MESH_HB_PUBLICATION_GET             (0xB0) /**< Params: None. */
-#define SERIAL_OPCODE_CMD_MESH_HB_PUBLICATION_SET             (0xB1)
+#define SERIAL_OPCODE_CMD_MESH_HB_PUBLICATION_SET             (0xB1) /**< Params: @ref serial_cmd_mesh_hb_publication_set_t */
 #define SERIAL_OPCODE_CMD_MESH_HB_SUBSCRIPTION_GET            (0xB2) /**< Params: None. */
-#define SERIAL_OPCODE_CMD_MESH_HB_SUBSCRIPTION_SET            (0xB3)
+#define SERIAL_OPCODE_CMD_MESH_HB_SUBSCRIPTION_SET            (0xB3) /**< Params: @ref serial_cmd_mesh_hb_subscription_set_t */
 #define SERIAL_OPCODE_CMD_RANGE_MESH_END                      (0xBF) /**< MESH range end. */
 
 #define SERIAL_OPCODE_CMD_RANGE_DFU_START                     (0xD0) /**< DFU range start. */

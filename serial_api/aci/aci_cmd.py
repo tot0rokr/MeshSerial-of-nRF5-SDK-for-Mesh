@@ -1014,6 +1014,24 @@ class HBSubscriptionGet(CommandPacket):
         __data = bytearray()
         super(HBSubscriptionGet, self).__init__(0xB2, __data)
 
+class HBSubscriptionSet(CommandPacket):
+    """Sets the Heartbeat Subscription state
+
+    Parameters
+    ----------
+        src : uint16_t
+            The unicast source address for messages a node shall process.
+        dst : uint16_t
+            The destination to send heartbeat messages.
+        period : uint32_t
+            The number of seconds left for processing messages.
+    """
+    def __init__(self, src, dst, period):
+        __data = bytearray()
+        __data += struct.pack("<H", src)
+        __data += struct.pack("<H", dst)
+        __data += struct.pack("<I", period)
+        super(HBSubscriptionSet, self).__init__(0xB3, __data)
 
 class JumpToBootloader(CommandPacket):
     """Immediately jump to bootloader mode."""
