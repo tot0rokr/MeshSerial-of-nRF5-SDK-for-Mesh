@@ -974,6 +974,12 @@ class HBPublicationGet(CommandPacket):
         __data = bytearray()
         super(HBPublicationGet, self).__init__(0xB0, __data)
 
+class HBSubscriptionGet(CommandPacket):
+    """Gets the Heartbeat Subscription state"""
+    def __init__(self):
+        __data = bytearray()
+        super(HBSubscriptionGet, self).__init__(0xB2, __data)
+
 
 class JumpToBootloader(CommandPacket):
     """Immediately jump to bootloader mode."""
@@ -1747,7 +1753,7 @@ class NetStateGetRsp(ResponsePacket):
         super(NetStateGetRsp, self).__init__("NetStateGet", 0xAF, __data)
 
 class HBPublicationGetRsp(ResponsePacket):
-    """Response to a(n) HHPublicationGet command."""
+    """Response to a(n) HBPublicationGet command."""
     def __init__(self, raw_data):
         __data = {}
         __data["dst"], = struct.unpack("<H", raw_data[0:2])
@@ -1758,6 +1764,17 @@ class HBPublicationGetRsp(ResponsePacket):
         __data["netkey_index"], = struct.unpack("<H", raw_data[7:9])
         super(HBPublicationGetRsp, self).__init__("HBPublicationGet", 0xB0, __data)
 
+class HBSubscriptionGetRsp(ResponsePacket):
+    """Response to a(n) HBSubscriptionGet command."""
+    def __init__(self, raw_data):
+        __data = {}
+        __data["src"], = struct.unpack("<H", raw_data[0:2])
+        __data["dst"], = struct.unpack("<H", raw_data[2:4])
+        __data["period_log"], = struct.unpack("<B", raw_data[4:5])
+        __data["count_log"], = struct.unpack("<B", raw_data[5:6])
+        __data["min_hops"], = struct.unpack("<B", raw_data[6:7])
+        __data["max_hops"], = struct.unpack("<B", raw_data[7:8])
+        super(HBSubscriptionGetRsp, self).__init__("HBSubscriptionGet", 0xB2, __data)
 
 class BankInfoGetRsp(ResponsePacket):
     """Response to a(n) BankInfoGet command."""
@@ -1949,6 +1966,7 @@ RESPONSE_LUT = {
     0xAB: {"object": PacketSendRsp, "name": "PacketSend"},
     0xAF: {"object": NetStateGetRsp, "name": "NetStateGet"},
     0xB0: {"object": HBPublicationGetRsp, "name": "HBPublicationGet"},
+    0xB2: {"object": HBSubscriptionGetRsp, "name": "HBSubscriptionGet"},
     0xD4: {"object": BankInfoGetRsp, "name": "BankInfoGet"},
     0xD6: {"object": StateGetRsp, "name": "StateGet"},
     0xE1: {"object": ModelPubAddrGetRsp, "name": "ModelPubAddrGet"},

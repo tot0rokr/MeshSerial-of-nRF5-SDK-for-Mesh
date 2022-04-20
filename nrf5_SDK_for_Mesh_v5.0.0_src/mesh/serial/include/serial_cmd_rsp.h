@@ -320,6 +320,17 @@ typedef struct __attribute((packed))
     uint16_t  netkey_index; /**< The global NetKey Index of the Netkey used to send.*/
 } serial_evt_cmd_rsp_data_hb_publication_get_t;
 
+/** Command response to @ref SERIAL_OPCODE_CMD_MESH_HB_SUBSCRIPTION_GET with the current heartbeat subscription state */
+typedef struct __attribute((packed))
+{
+    uint16_t  src; /**< The unicast source address for messages a node shall process.*/
+    uint16_t  dst; /**< The destination to receive heartbeat messages.*/
+    uint8_t  period_log; /**< The number of seconds left for processing messages.*/
+    uint8_t  count_log; /**< The number of periodical messages received.*/
+    uint16_t  min_hops; /**< The minimum hops value registered when receiving messages.*/
+    uint16_t  max_hops; /**< The maximum hops value registered when receiving messages.*/
+} serial_evt_cmd_rsp_data_hb_subscription_get_t;
+
 /** Command response packet. */
 typedef struct __attribute((packed))
 {
@@ -360,6 +371,7 @@ typedef struct __attribute((packed))
         serial_evt_cmd_rsp_data_packet_send_t          packet_send;    /**< Information about the sent packet. */
         serial_evt_cmd_rsp_data_net_state_get_t        net_state_get;  /**< Net state. */
         serial_evt_cmd_rsp_data_hb_publication_get_t   hb_publication_get; /**< Heartbeat Publication States. */
+        serial_evt_cmd_rsp_data_hb_subscription_get_t  hb_subscription_get; /**< Heartbeat Subscription States. */
     } data; /**< Optional command response data. */
 } serial_evt_cmd_rsp_t;
 

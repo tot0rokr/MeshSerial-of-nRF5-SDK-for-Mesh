@@ -600,6 +600,34 @@ static void handle_heartbeat_publication_get(const serial_packet_t * p_cmd)
     serial_cmd_rsp_send(p_cmd->opcode, SERIAL_STATUS_SUCCESS, (uint8_t *)&rsp, sizeof(rsp));
 }
 
+static void handle_heartbeat_publication_set(const serial_packet_t * p_cmd) {}
+static void handle_heartbeat_subscription_get(const serial_packet_t * p_cmd)
+{
+    const heartbeat_subscription_state_t * p_hb_sub = heartbeat_subscription_get();
+    serial_evt_cmd_rsp_data_hb_subscription_get_t rsp;
+
+    /* When the Heartbeat Subscription Source or Destination state is set to the unassigned address,
+     the value of - the Source and Destination fields of the Status message shall be set to the
+     unassigned address and the values of the CountLog, PeriodLog, MinHops, and MaxHops fields shall
+     be set to 0x00. Refer to @tagMeshSp section 4.4.1.2.16 */
+    if (p_hb_sub->src == NRF_MESH_ADDR_UNASSIGNED ||
+        p_hb_sub->dst == NRF_MESH_ADDR_UNASSIGNED)
+    {
+        memset(&rsp, 0, sizeof(serial_evt_cmd_rsp_data_hb_subscription_get_t));
+    }
+    else
+    {
+        rsp.src = p_hb_sub->src;
+        rsp.dst = p_hb_sub->dst;
+        rsp.count_log = heartbeat_subscription_count_encode(p_hb_sub->count);
+        rsp.period_log = heartbeat_pubsub_period_encode(p_hb_sub->period);
+        rsp.min_hops = p_hb_sub->min_hops;
+        rsp.max_hops = p_hb_sub->max_hops;
+    }
+    serial_cmd_rsp_send(p_cmd->opcode, SERIAL_STATUS_SUCCESS, (uint8_t *)&rsp, sizeof(rsp));
+}
+static void handle_heartbeat_subscription_set(const serial_packet_t * p_cmd) {}
+
 /*****************************************************************************
 * Static functions
 *****************************************************************************/
@@ -640,12 +668,10 @@ static const mesh_serial_cmd_handler_t m_handlers[] =
     {SERIAL_OPCODE_CMD_MESH_CONFIG_SERVER_BIND,             sizeof(serial_cmd_mesh_config_server_devkey_bind_t),     0,  handle_config_devkey_bind},
     {SERIAL_OPCODE_CMD_MESH_NET_STATE_SET,                  sizeof(serial_cmd_mesh_net_state_set_t),                 0,  handle_net_state_set},
     {SERIAL_OPCODE_CMD_MESH_NET_STATE_GET,                  0,                                                       0,  handle_net_state_get},
-    {SERIAL_OPCODE_CMD_MESH_HB_PUBLICATION_GET,             0,                                                       0,  handle_heartbeat_publication_get}
-    /*
-     * {SERIAL_OPCODE_CMD_MESH_HB_PUBLICATION_SET,             sizeof(serial_cmd_mesh_hb_publication_set_t),            0,  handle_heartbeat_publication_set},
-     * {SERIAL_OPCODE_CMD_MESH_HB_SUBSCRIPTION_GET,            sizeof(serial_cmd_mesh_hb_subscription_get_t),           0,  handle_heartbeat_subscription_get},
-     * {SERIAL_OPCODE_CMD_MESH_HB_SUBSCRIPTION_SET,            sizeof(serial_cmd_mesh_hb_subscription_set_t),           0,  handle_heartbeat_subscription_set}
-     */
+    {SERIAL_OPCODE_CMD_MESH_HB_PUBLICATION_GET,             0,                                                       0,  handle_heartbeat_publication_get},
+    {SERIAL_OPCODE_CMD_MESH_HB_PUBLICATION_SET,             sizeof(serial_cmd_mesh_hb_publication_set_t),            0,  handle_heartbeat_publication_set},
+    {SERIAL_OPCODE_CMD_MESH_HB_SUBSCRIPTION_GET,            0,                                                       0,  handle_heartbeat_subscription_get},
+    {SERIAL_OPCODE_CMD_MESH_HB_SUBSCRIPTION_SET,            sizeof(serial_cmd_mesh_hb_subscription_set_t),           0,  handle_heartbeat_subscription_set}
 };
 
 static void mesh_config_listener_cb(mesh_config_change_reason_t reason, mesh_config_entry_id_t id, const void * p_entry)
