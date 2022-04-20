@@ -974,6 +974,40 @@ class HBPublicationGet(CommandPacket):
         __data = bytearray()
         super(HBPublicationGet, self).__init__(0xB0, __data)
 
+class HBPublicationSet(CommandPacket):
+    """Sets the Heartbeat Publication state
+
+    Parameters
+    ----------
+        dst : uint16_t
+            The destination to send heartbeat messages.
+        count : uint32_t
+            How many messages to send.
+        period : uint32_t
+            What interval to send messages.
+        ttl : uint8_t
+            Initial TTL.
+        features : uint16_t
+            The features that trigger sending messages when changed.
+        netkey_index : uint16_t
+            The global NetKey Index of the Netkey used to send.
+
+    Return
+    ------
+        NRF_ERROR_INVALID_DATA :
+            Invalid netkey_index.
+            Check that A netkey is added corresponding the netkey_index in device
+    """
+    def __init__(self, dst, count, period, ttl, features, netkey_index):
+        __data = bytearray()
+        __data += struct.pack("<H", dst)
+        __data += struct.pack("<I", count)
+        __data += struct.pack("<I", period)
+        __data += struct.pack("<B", ttl)
+        __data += struct.pack("<H", features)
+        __data += struct.pack("<H", netkey_index)
+        super(HBPublicationSet, self).__init__(0xB1, __data)
+
 class HBSubscriptionGet(CommandPacket):
     """Gets the Heartbeat Subscription state"""
     def __init__(self):

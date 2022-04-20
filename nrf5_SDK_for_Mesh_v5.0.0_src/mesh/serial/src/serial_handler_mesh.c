@@ -600,7 +600,30 @@ static void handle_heartbeat_publication_get(const serial_packet_t * p_cmd)
     serial_cmd_rsp_send(p_cmd->opcode, SERIAL_STATUS_SUCCESS, (uint8_t *)&rsp, sizeof(rsp));
 }
 
-static void handle_heartbeat_publication_set(const serial_packet_t * p_cmd) {}
+static void handle_heartbeat_publication_set(const serial_packet_t * p_cmd)
+{
+    uint32_t status;
+    const heartbeat_publication_state_t hb_pub = {
+        .dst          = p_cmd->payload.cmd.mesh.hb_publication_set.dst,
+        .count        = p_cmd->payload.cmd.mesh.hb_publication_set.count,
+        .period       = p_cmd->payload.cmd.mesh.hb_publication_set.period,
+        .ttl          = p_cmd->payload.cmd.mesh.hb_publication_set.ttl,
+        .features     = p_cmd->payload.cmd.mesh.hb_publication_set.features,
+        .netkey_index = p_cmd->payload.cmd.mesh.hb_publication_set.netkey_index
+    };
+
+    /* This is specifically required for INVALID_NETKEY status code */
+    if (dsm_net_key_index_to_subnet_handle(p_cmd->payload.cmd.mesh.hb_publication_set.netkey_index)
+                                           == DSM_HANDLE_INVALID)
+    {
+        status = NRF_ERROR_INVALID_DATA;
+    }
+    else
+    {
+        status = heartbeat_publication_set(&hb_pub);
+    }
+    serial_handler_common_cmd_rsp_nodata_on_error(p_cmd->opcode, status, NULL, 0);
+}
 static void handle_heartbeat_subscription_get(const serial_packet_t * p_cmd)
 {
     const heartbeat_subscription_state_t * p_hb_sub = heartbeat_subscription_get();
