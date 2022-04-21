@@ -56,6 +56,7 @@ from mesh.database import MeshDB                        # NOQA: ignore unused im
 from models.config import ConfigurationClient           # NOQA: ignore unused import
 from models.generic_on_off import GenericOnOffClient    # NOQA: ignore unused import
 from models.generic_level import GenericLevelClient     # NOQA: ignore unused import
+from models.generic_default_transition_time import GenericDefaultTransitionTimeClient # NOQA: ignore unused import
 
 
 LOG_DIR = os.path.join(os.path.dirname(sys.argv[0]), "log")
