@@ -76,7 +76,7 @@ class TransitionTime(object):
         elif (enc_time & cls.STEP_MASK) == cls.STEP_RESOLUTION_10S:
             return (enc_time & ~cls.STEP_MASK) * cls.STEP_10S_FACTOR
         elif (enc_time & cls.STEP_MASK) == cls.STEP_RESOLUTION_10M:
-            return (enc_time & ~cls.STEP_MASK) * cls.STEP_10S_FACTOR
+            return (enc_time & ~cls.STEP_MASK) * cls.STEP_10M_FACTOR
         else:
             return 0
 
