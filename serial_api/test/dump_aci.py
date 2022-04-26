@@ -15,10 +15,15 @@ class DumpLogger(object):
     def debug(self, msg, *args, **kwargs):
         self._logging("Dump LOG(debug)" + msg, args, kwargs)
 
+class DumpSerial(object):
+    def __init__(self):
+        self.port = "dump_serial"
+
 class DumpDevice(object):
     def __init__(self):
         self.logger = DumpLogger("DumpDevice")
         self._pack_recipients = []
+        self.serial = DumpSerial()
 
     def write_aci_cmd(self, cmd):
         if isinstance(cmd, CommandPacket):
