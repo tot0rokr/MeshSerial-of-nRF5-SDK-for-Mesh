@@ -3,7 +3,7 @@ from mesh import access
 
 class DumpOption(object):
     log_level = 4
-    devices = ["dump_serial"]
+    devices = ["dump_serial", "dump_serial2"]
     baudrate = '115200'
     no_logfile = False
 
@@ -27,10 +27,15 @@ class DumpSerial(object):
         self.port = "dump_serial"
 
 class DumpDevice(object):
-    def __init__(self):
-        self.logger = DumpLogger("dump_serial")
+    def __init__(self, port="dump_serial", baudrate="14400", device_name=None):
+        if device_name is None:
+            device_name = port
+        self.logger = DumpLogger(device_name)
         self._pack_recipients = []
         self.serial = DumpSerial()
+        self.port = port
+        self.baudrate = baudrate
+        self.device_name = device_name
 
     def write_aci_cmd(self, cmd):
         if isinstance(cmd, CommandPacket):
