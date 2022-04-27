@@ -1,6 +1,13 @@
 from aci.aci_utils import CommandPacket, EventPacket
 from mesh import access
 
+class DumpOption(object):
+    log_level = 4
+    devices = ["dump_serial"]
+    baudrate = '115200'
+    no_logfile = False
+
+
 class DumpLogger(object):
     def __init__(self, name):
         self._name = name + ": "
@@ -21,7 +28,7 @@ class DumpSerial(object):
 
 class DumpDevice(object):
     def __init__(self):
-        self.logger = DumpLogger("DumpDevice")
+        self.logger = DumpLogger("dump_serial")
         self._pack_recipients = []
         self.serial = DumpSerial()
 
