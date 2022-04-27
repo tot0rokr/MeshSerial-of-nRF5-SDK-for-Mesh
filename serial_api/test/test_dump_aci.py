@@ -11,7 +11,7 @@ class TestDumpACI(unittest.TestCase):
         self.assertIsNone(acidev.write_aci_cmd("NOT CommandPacket data"))
         test_packet = CommandPacket(0x13, bytearray([0x12, 0x11, 0x00]))
         self.assertIsNotNone(acidev.write_aci_cmd(test_packet))
-        acidev.add_packet_recipient(lambda event: print("%x: %r" % (event._opcode, event._data)) if event._opcode == 0x82 else 0)
+        acidev.add_packet_recipient(lambda event: self.assertEqual(event._opcode, 0x82))
         test_event = EventPacket("Echo", 0x82, {"key": [0, 1], "index": 42})
         acidev.process_packet(test_event)
 

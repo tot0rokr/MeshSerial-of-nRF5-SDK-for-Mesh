@@ -12,7 +12,8 @@ class DumpLogger(object):
     def __init__(self, name):
         self._name = name + ": "
     def _logging(self, msg, *args, **kwargs):
-        print((self._name + msg) % ([a for a in args]))
+        pass
+        # print((self._name + msg) % ([a for a in args]))
     def error(self, msg, *args, **kwargs):
         self._logging("Dump LOG(error)" + msg, args, kwargs)
     def warning(self, msg, *args, **kwargs):
