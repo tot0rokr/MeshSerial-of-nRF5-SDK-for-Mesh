@@ -45,6 +45,24 @@ class TestDeviceMgr(unittest.TestCase):
         self.assertIsNotNone(device3)
         self.assertIs(device3.device_name, options.devices[1])
 
+    def test_remove_device(self):
+        options = self.options
+        device_handle = self.device_handles[0]
+        device = self.mgr.hold_device(device_handle=device_handle)
+        self.assertIsNotNone(device)
+        self.assertIs(device.device_name, options.devices[0])
+        device = self.mgr.device(device_handle=device_handle)
+        self.assertIsNotNone(device)
+
+        self.mgr.remove_device(device_handle=device_handle)
+        device = self.mgr.device(device_handle=device_handle)
+        self.assertIsNotNone(device)
+
+        self.mgr.release_device(device_handle=device_handle)
+        self.mgr.remove_device(device_handle=device_handle)
+        device = self.mgr.device(device_handle=device_handle)
+        self.assertIsNone(device)
+
     def test_check_device_mgr_singleton(self):
         mgr = DeviceMgr()
         self.assertIs(self.mgr, mgr)
