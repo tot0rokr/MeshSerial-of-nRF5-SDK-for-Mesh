@@ -41,9 +41,12 @@ SEGGER_UART_BYTES_MAX = 63
 
 
 class Device(object):
-    def __init__(self, device_name):
+    def __init__(self, device_name, logger=None):
         self.device_name = device_name
-        self.logger = logging.getLogger(self.device_name)
+        if logger is None:
+            self.logger = logging.getLogger(self.device_name)
+        else:
+            self.logger = logger
         self._pack_recipients = []
         self._cmd_recipients = []
         self.lock = threading.Event()
@@ -96,7 +99,7 @@ class Device(object):
             try:
                 fun(command)
             except:
-                self.logger.error('Exception in pkt handler %r', fun)
+                self.logger.error('Exception in cmd handler %r', fun)
                 self.logger.error('traceback: %s', traceback.format_exc())
 
     def __writer(self):
@@ -124,8 +127,8 @@ class Uart(threading.Thread, Device):
         if not device_name:
             device_name = port
         self.device_name = device_name
-        self.logger = logging.getLogger(self.device_name)
-        Device.__init__(self, self.device_name)
+        logger = logging.getLogger(self.device_name)
+        Device.__init__(self, self.device_name, logger=logger)
 
         self._write_lock = threading.Lock()
 
