@@ -10,6 +10,7 @@ from test.runtime.test_mesh_serial_session import TestMeshSerialSession
 from test.runtime.test_configure_logger import TestConfigureLogger
 
 from test.runtime.test_device_mgr import TestDeviceMgr
+from test.runtime.test_session_mgr import TestSessionMgr
 
 def session_suite():
     suite = unittest.TestSuite()
@@ -21,6 +22,7 @@ def session_suite():
 def api_suite():
     suite = unittest.TestSuite()
     suite.addTests(TestDeviceMgr)
+    suite.addTests(TestSessionMgr)
     return suite
 
 if __name__ == "__main__":

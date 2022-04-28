@@ -36,6 +36,9 @@ class MeshSerialSession(object):
         # We add it after all the member variables has been defined
         self.acidev.add_packet_recipient(self.__event_handler)
 
+    def __del__(self):
+        del self.access
+
     def event_pop(self):
         if len(self._other_events) > 0:
             return self._other_events.pop()
