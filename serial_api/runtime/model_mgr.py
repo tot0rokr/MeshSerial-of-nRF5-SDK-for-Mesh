@@ -11,19 +11,22 @@ class ModelMgr(object):
     def __init__(self, prov_db):
         self.__models = dict()
         self.__next_model_handle = 0
-        self.create_model(ConfigurationClient(prov_db), "ConfigurationClient")
-        self.create_model(SimpleOnOffClient(), "SimpleOnOffClient")
-        self.create_model(GenericOnOffClient(), "GenericOnOffClient")
-        self.create_model(GenericLevelClient(), "GenericLevelClient")
-        self.create_model(GenericDefaultTransitionTimeClient(), "GenericDefaultTransitionTimeClient")
-        self.create_model(GenericPowerOnOffClient(), "GenericPowerOnOffClient")
-        self.create_model(GenericPowerLevelClient(), "GenericPowerLevelClient")
+        self.create_model(ConfigurationClient(prov_db))
+        self.create_model(SimpleOnOffClient())
+        self.create_model(GenericOnOffClient())
+        self.create_model(GenericLevelClient())
+        self.create_model(GenericDefaultTransitionTimeClient())
+        self.create_model(GenericPowerOnOffClient())
+        self.create_model(GenericPowerLevelClient())
 
-    def create_model(self, model, name):
+    def create_model(self, model):
         if not isinstance(model, Model):
             raise Exception("model is not Model")
         self.__models[self.__next_model_handle] = model
         self.__next_model_handle += 1
+
+    def all_model_names(self):
+        return list(map(lambda x: x.__class__.__name__, self.__models.values()))
 
     def model_handle(self, name):
         for k, v in self.__models.items():

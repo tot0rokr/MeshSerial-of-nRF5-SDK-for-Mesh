@@ -14,13 +14,14 @@ class TestModelMgr(unittest.TestCase):
         self.device_handle = self.device_mgr.create_device(device=DumpDevice())
         self.session_handle = self.session_mgr.create_session(device_handle=self.device_handle)
         self.session = self.session_mgr.session(self.session_handle)
-        self.model_names = ['ConfigurationClient',
-                            'SimpleOnOffClient',
-                            'GenericOnOffClient',
-                            'GenericLevelClient',
-                            'GenericDefaultTransitionTimeClient',
-                            'GenericPowerOnOffClient',
-                            'GenericPowerLevelClient']
+        #  self.model_names = ['ConfigurationClient',
+                            #  'SimpleOnOffClient',
+                            #  'GenericOnOffClient',
+                            #  'GenericLevelClient',
+                            #  'GenericDefaultTransitionTimeClient',
+                            #  'GenericPowerOnOffClient',
+                            #  'GenericPowerLevelClient']
+        self.model_names = self.mgr.all_model_names()
         self.model_handles = list(map(lambda x: self.mgr.model_handle(x),
                                       self.model_names))
         print(self.model_handles)
@@ -35,9 +36,9 @@ class TestModelMgr(unittest.TestCase):
                 self.session.model_add(model)
                 model.publish_set(0xFF, 0xFF)
                 with self.assertLogs() as cm:
-                    if model_handle == 0:
+                    if hasattr(model, 'node_reset'):
                         model.node_reset()
-                    elif 0 < model_handle <= len(self.model_names):
+                    elif hasattr(model, 'get'):
                         model.get()
                 self.assertRegex(str(cm.output), "Sending opcode")
 if __name__ == '__main__':
