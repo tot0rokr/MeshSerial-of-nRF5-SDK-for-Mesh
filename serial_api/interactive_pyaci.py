@@ -59,6 +59,7 @@ from models.generic_level import GenericLevelClient     # NOQA: ignore unused im
 from models.generic_default_transition_time import GenericDefaultTransitionTimeClient # NOQA: ignore unused import
 from models.generic_power_on_off import GenericPowerOnOffClient # NOQA: ignore unused import
 from models.generic_power_level import GenericPowerLevelClient # NOQA: ignore unused import
+from models.light_lightness import LightLightnessClient # NOQA: ignore unused import
 
 
 LOG_DIR = os.path.join(os.path.dirname(sys.argv[0]), "log")
