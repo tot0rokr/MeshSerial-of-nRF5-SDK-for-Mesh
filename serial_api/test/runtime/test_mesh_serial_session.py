@@ -7,7 +7,7 @@ from test.dump_aci import DumpLogger, DumpDevice, DumpApplicationConfig
 
 class TestMeshSerialSession(unittest.TestCase):
     def setUp(self):
-        self.session = MeshSerialSession(DumpDevice(), DumpLogger("Dump"), DumpApplicationConfig())
+        self.session = MeshSerialSession(DumpDevice(), DumpLogger("Dump"), DumpApplicationConfig(), None)
 
     def test_event_filter_add(self):
         session = self.session

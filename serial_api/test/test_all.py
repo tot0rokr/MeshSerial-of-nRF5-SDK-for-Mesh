@@ -13,6 +13,8 @@ from test.runtime.test_device_mgr import TestDeviceMgr
 from test.runtime.test_session_mgr import TestSessionMgr
 from test.runtime.test_model_mgr import TestModelMgr
 
+from test.runtime.test_mesh_serial import TestMeshSerial
+
 def session_suite():
     suite = unittest.TestSuite()
     suite.addTests(TestDumpACI,
@@ -27,9 +29,15 @@ def mgr_suite():
     suite.addTests(TestModelMgr)
     return suite
 
+def serial_suite():
+    suite = unittest.TestSuite()
+    suite.addTests(TestMeshSerial)
+    return suite
+
 if __name__ == "__main__":
     runner = unittest.TextTestRunner()
     runner.run(session_suite())
-    runner.run(api_suite())
+    runner.run(mgr_suite())
+    runner.run(serial_suite())
     #  print(suite)
     #  runner.run(suite)

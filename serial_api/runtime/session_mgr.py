@@ -10,7 +10,7 @@ class SessionMgr(object):
         self.__sessions = dict()
         self.__next_session_handle = 0
 
-    def create_session(self, device_handle):
+    def create_session(self, device_handle, model_mgr):
         logger = configure_logger(self.options.log_level, self.device_mgr.device(device_handle).device_name)
         device = self.device_mgr.hold_device(device_handle)
         if device is None:
@@ -18,7 +18,8 @@ class SessionMgr(object):
         self.__sessions[self.__next_session_handle] = {'session': MeshSerialSession(
                                                                         self.device_mgr.device(device_handle),
                                                                         logger,
-                                                                        self.config),
+                                                                        self.config,
+                                                                        model_mgr),
                                                        'device_handle': device_handle}
         self.__next_session_handle += 1
         return self.__next_session_handle - 1

@@ -11,7 +11,7 @@ class TestConfigureLogger(unittest.TestCase):
     def setUp(self):
         options = DumpOption()
         logger = configure_logger(options.log_level, options.devices[0].split("/")[-1])
-        self.session = MeshSerialSession(DumpDevice(), logger, DumpApplicationConfig())
+        self.session = MeshSerialSession(DumpDevice(), logger, DumpApplicationConfig(), None)
         self.session.logger.error("Test error")
         self.session.logger.warning("Test warn")
         self.session.logger.info("Test info")

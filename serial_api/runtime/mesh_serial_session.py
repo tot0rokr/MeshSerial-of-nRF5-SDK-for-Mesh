@@ -11,7 +11,7 @@ class MeshSerialSession(object):
     DEFAULT_STATIC_AUTH_DATA = bytearray([0xDD] * 16)
     DEFAULT_LOCAL_UNICAST_ADDRESS_START = 0x0001
 
-    def __init__(self, acidev, logger, config):
+    def __init__(self, acidev, logger, config, model_mgr):
         self.acidev = acidev
         self._event_filter = set()
         self._event_filter_enabled = True
@@ -20,6 +20,8 @@ class MeshSerialSession(object):
         self.logger = logger
         self.send = self.acidev.write_aci_cmd
         self.print_event_on = True
+        self.model_mgr = model_mgr
+        self.model_handles = list()
 
         # Increment the local unicast address range
         # for the next Meshserialsession instance
@@ -38,6 +40,16 @@ class MeshSerialSession(object):
 
     def __del__(self):
         del self.access
+
+    def get_model(self, model_name):
+        model_handle = self.model_mgr.model_handle(model_name)
+        model = self.model_mgr.model(model_handle)
+        if model is None:
+            return None
+        if not model_handle in self.model_handles:
+            self.model_add(model)
+            self.model_handles.append(model_handle)
+        return model
 
     def event_pop(self):
         if len(self._other_events) > 0:
