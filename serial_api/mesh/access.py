@@ -203,6 +203,9 @@ class Access(object):
         self.aci.acidev.add_packet_recipient(self.__event_handler)
         self.aci.event_filter_add([Event.MESH_MESSAGE_RECEIVED_UNICAST])
 
+    def __del__(self):
+        del self.elements
+
     def model_add(self, model, idx=0):
         self.elements[idx].model_add(model)
 
