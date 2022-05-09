@@ -1,12 +1,26 @@
 from aci.aci_utils import CommandPacket, EventPacket
-from mesh import access
+
+from mesh.access import Model, Opcode, Access
+import struct
+import logging
+
+class DumpModel(Model):
+    def __init__(self):
+        self.opcodes = [ (Opcode(0xAABB), self.__dump_handler) ]
+        super(DumpModel, self).__init__(self.opcodes)
+    def get(self):
+        pass
+    def set(self, x, y):
+        pass
+    def __dump_handler(self, opcode, message):
+        a, b, c, d = struct.unpack("<BBBB", message.data[0:4])
+        return {'a':a, 'b':b, 'c':c, 'd':d}
 
 class DumpOption(object):
-    log_level = 4
+    log_level = 0
     devices = ["dump_serial", "dump_serial2"]
     baudrate = '115200'
     no_logfile = False
-
 
 class DumpLogger(object):
     def __init__(self, name):
@@ -58,7 +72,7 @@ class DumpDevice(object):
 class DumpApplicationConfig(object):
     def __init__(self):
         self.data = {
-            'ACCESS_ELEMENT_COUNT': 99,
+            'ACCESS_ELEMENT_COUNT': 1,
         }
         self.__dict__ = self.data
 
@@ -86,7 +100,7 @@ class DumpACI(object):
         DumpACI.DEFAULT_LOCAL_UNICAST_ADDRESS_START += (
             self.CONFIG.ACCESS_ELEMENT_COUNT)
 
-        self.access = access.Access(self, self.local_unicast_address_start,
+        self.access = Access(self, self.local_unicast_address_start,
                                     self.CONFIG.ACCESS_ELEMENT_COUNT)
         self.model_add = self.access.model_add
 
