@@ -11,7 +11,9 @@ class SessionMgr(object):
         self.__next_session_handle = 0
 
     def create_session(self, device_handle, model_mgr):
-        logger = configure_logger(self.options.log_level, self.device_mgr.device(device_handle).device_name)
+        logger = configure_logger(self.options.log_level,
+                                  self.device_mgr.device(device_handle).device_name,
+                                  self.device_mgr.device(device_handle).port)
         device = self.device_mgr.hold_device(device_handle)
         if device is None:
             raise Exception("Target device (handle #{}) can't be used.".format(device_handle))
