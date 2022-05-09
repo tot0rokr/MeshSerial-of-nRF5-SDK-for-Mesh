@@ -22,6 +22,8 @@ class MeshSerialSession(object):
         self.print_event_on = True
         self.model_mgr = model_mgr
         self.model_handles = list()
+        self.cmdrsp_queue = list()
+        self.event_queue = list()
 
         # Increment the local unicast address range
         # for the next Meshserialsession instance
@@ -85,9 +87,11 @@ class MeshSerialSession(object):
                     STATUS_CODE_LUT[event._data["status"]]["code"]))
                 return -1
             else:
-                text = str(cmd.response_deserialize(event))
+                data = cmd.response_deserialize(event)
+                text = str(data)
                 if text == "None":
                     text = "Success"
+                self.cmdrsp_queue.append(data)
                 self.logger.info(text)
         else:
             if self.print_event_on and event is not None:
