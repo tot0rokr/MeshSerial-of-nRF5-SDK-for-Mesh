@@ -113,7 +113,7 @@ def opcode_from_message_get(data):
 class AccessMessage(object):
     def __init__(self, event):
         self.opcode_raw = opcode_from_message_get(event._data["data"])
-        self.meta = {k: v for k, v in event._data.items() if k is not "data"}
+        self.meta = {k: v for k, v in event._data.items() if k != "data"}
         self.data = event._data["data"][len(self.opcode_raw):]
 
     def __str__(self):
@@ -213,7 +213,7 @@ class Access(object):
         if event._opcode == Event.MESH_MESSAGE_RECEIVED_UNICAST:
             message = AccessMessage(event)
             element_index = event._data["dst"] - self.elements[0].address
-            assert(element_index < len(self.elements) and element_index >= 0)
+            assert element_index < len(self.elements) and element_index >= 0, "Must be 0 <= %d < %d" % (element_index, len(self.elements))
             for model in self.elements[element_index].models:
                 try:
                     opcode = message.opcode_raw
