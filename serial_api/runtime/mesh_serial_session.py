@@ -4,6 +4,7 @@ import aci.aci_evt as evt
 
 from mesh import access
 
+from runtime.model_mgr import ModelMgr
 class MeshSerialSession(object):
     DEFAULT_APP_KEY = bytearray([0xAA] * 16)
     DEFAULT_SUBNET_KEY = bytearray([0xBB] * 16)
@@ -11,7 +12,7 @@ class MeshSerialSession(object):
     DEFAULT_STATIC_AUTH_DATA = bytearray([0xDD] * 16)
     DEFAULT_LOCAL_UNICAST_ADDRESS_START = 0x0001
 
-    def __init__(self, acidev, logger, config, model_mgr):
+    def __init__(self, acidev, logger, config, prov_db):
         self.acidev = acidev
         self._event_filter = set()
         self._event_filter_enabled = True
@@ -20,7 +21,7 @@ class MeshSerialSession(object):
         self.logger = logger
         self.send = self.acidev.write_aci_cmd
         self.print_event_on = True
-        self.model_mgr = model_mgr
+        self.model_mgr = ModelMgr(prov_db)
         self.model_handles = list()
         self.cmdrsp_queue = list()
         self.event_queue = list()

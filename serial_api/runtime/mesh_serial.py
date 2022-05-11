@@ -1,7 +1,6 @@
 from runtime.mesh_serial_session import MeshSerialSession
 from runtime.device_mgr import DeviceMgr
 from runtime.session_mgr import SessionMgr
-from runtime.model_mgr import ModelMgr
 
 import aci.aci_cmd as cmd
 
@@ -15,10 +14,9 @@ class MeshSerial(object):
 
     def create_device(self, device):
         return self.device_mgr.create_device(device)
-        
+
     def create_session(self, device_handle, prov_db):
-        model_mgr = ModelMgr(prov_db)
-        return self.session_mgr.create_session(device_handle, model_mgr)
+        return self.session_mgr.create_session(device_handle, prov_db)
 
     def _decode_handles(self, application, address):
         # TODO:
@@ -43,5 +41,3 @@ class MeshSerial(object):
         else:
             raise Exception("Command is invalid: arg")
 
-        
-        

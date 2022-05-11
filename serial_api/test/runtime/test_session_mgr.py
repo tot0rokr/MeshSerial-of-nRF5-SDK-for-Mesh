@@ -12,7 +12,7 @@ class TestSessionMgr(unittest.TestCase):
 
     def test_session(self):
         self.assertRaises(Exception, self.mgr.create_session, device_handle=999)
-        session_handle = self.mgr.create_session(device_handle=self.device_handle, model_mgr=None)
+        session_handle = self.mgr.create_session(device_handle=self.device_handle, prov_db=None)
         session = self.mgr.session(999)
         self.assertIsNone(session)
         session = self.mgr.session(session_handle)
@@ -27,10 +27,10 @@ class TestSessionMgr(unittest.TestCase):
         self.assertEqual(session.send(test_packet), b'\x04\x13\x12\x11\x00')
 
         # Create session of in-used device_handle
-        self.assertRaises(Exception, self.mgr.create_session, device_handle=self.device_handle, model_mgr=None)
+        self.assertRaises(Exception, self.mgr.create_session, device_handle=self.device_handle, prov_db=None)
 
     def test_remove_session(self):
-        session_handle = self.mgr.create_session(device_handle=self.device_handle, model_mgr=None)
+        session_handle = self.mgr.create_session(device_handle=self.device_handle, prov_db=None)
         session = self.mgr.session(session_handle)
         self.assertIsNotNone(session)
         self.assertIsNone(self.device_mgr.hold_device(self.device_handle))

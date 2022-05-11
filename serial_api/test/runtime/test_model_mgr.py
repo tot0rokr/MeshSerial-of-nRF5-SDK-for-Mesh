@@ -12,7 +12,7 @@ class TestModelMgr(unittest.TestCase):
         self.device_mgr = DeviceMgr()
         self.session_mgr = SessionMgr(DumpOption(), DumpApplicationConfig(), self.device_mgr)
         self.device_handle = self.device_mgr.create_device(device=DumpDevice())
-        self.session_handle = self.session_mgr.create_session(device_handle=self.device_handle, model_mgr=None)
+        self.session_handle = self.session_mgr.create_session(device_handle=self.device_handle, prov_db=None)
         self.session = self.session_mgr.session(self.session_handle)
         #  self.model_names = ['ConfigurationClient',
                             #  'SimpleOnOffClient',

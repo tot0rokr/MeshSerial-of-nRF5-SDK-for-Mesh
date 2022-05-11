@@ -41,4 +41,4 @@ class ModelMgr(object):
             return None
         else:
             return self.__models[model_handle]
-        
+
