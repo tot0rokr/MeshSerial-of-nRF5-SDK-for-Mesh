@@ -174,6 +174,15 @@ class Interactive(object):
             self.local_unicast_address_start,
             self.CONFIG.ACCESS_ELEMENT_COUNT))
 
+    def put_command(self, cmd):
+        pass
+
+    def put_event(self, evt):
+        pass
+
+    def put_command_response(self, rsp):
+        pass
+
     def __event_handler(self, event):
         if self._event_filter_enabled and event._opcode in self._event_filter:
             # Ignore event

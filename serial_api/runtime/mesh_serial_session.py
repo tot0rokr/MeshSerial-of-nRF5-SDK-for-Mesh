@@ -1,30 +1,70 @@
 from aci.aci_utils import STATUS_CODE_LUT
-import aci.aci_cmd as cmd
-import aci.aci_evt as evt
+import aci.aci_cmd as aci_cmd
+import aci.aci_evt as aci_evt
 
 from mesh import access
 
 from runtime.model_mgr import ModelMgr
-class MeshSerialSession(object):
+from collections import deque
+import threading
+import time
+
+class ServiceHandler(object):
+    def __init__(self, func, cond, destructor=None):
+        self.event = threading.Event()
+        self.func = func
+        if cond is None:
+            self.cond = lambda *args: True
+        else:
+            self.cond = cond
+        self.data = None
+        self.is_available = True
+        self.destructor = destructor #RFU
+
+    def __del__(self):
+        if self.destructor is not None:
+            self.destructor(self)
+
+    def __call__(self, timeout=None):
+        self.event.wait(timeout)
+        if not self.event.is_set():
+            raise Exception("It does receive any response for timeout")
+        data, self.data = self.data, None
+        return self.func(data)
+
+    def filter(self, *args):
+        #  print(*args)
+        return self.cond(*args) and self.data is None
+
+    def put(self, data):
+        self.data = data
+        self.event.set()
+
+class MeshSerialSession(threading.Thread):
     DEFAULT_APP_KEY = bytearray([0xAA] * 16)
     DEFAULT_SUBNET_KEY = bytearray([0xBB] * 16)
     DEFAULT_VIRTUAL_ADDRESS = bytearray([0xCC] * 16)
     DEFAULT_STATIC_AUTH_DATA = bytearray([0xDD] * 16)
     DEFAULT_LOCAL_UNICAST_ADDRESS_START = 0x0001
 
-    def __init__(self, acidev, logger, config, prov_db):
+    def __init__(self, acidev, logger, config, prov_db, quantum=0.1, *args):
+        super(MeshSerialSession, self).__init__()
+        self.daemon = True
+
         self.acidev = acidev
-        self._event_filter = set()
-        self._event_filter_enabled = True
-        self._other_events = []
         self.CONFIG = config
         self.logger = logger
-        self.send = self.acidev.write_aci_cmd
-        self.print_event_on = True
+        self.send = self.put_command
         self.model_mgr = ModelMgr(prov_db)
         self.model_handles = list()
-        self.cmdrsp_queue = list()
-        self.event_queue = list()
+
+        # Handling events
+        self.cmdrsp_queue = deque()
+        self.event_queue = deque()
+        self.cmd_queue = deque()
+        self.wake_up_worker = threading.Event()
+        self.__quantum = int(quantum * 1000) # unit: milliseconds
+        self.service_handlers = dict()
 
         # Increment the local unicast address range
         # for the next Meshserialsession instance
@@ -42,7 +82,13 @@ class MeshSerialSession(object):
         self.acidev.add_packet_recipient(self.__event_handler)
 
     def __del__(self):
+        self.join()
         del self.access
+        del self.cmdrsp_queue
+        del self.event_queue
+        del self.wake_up_worker
+        del self.model_mgr
+        del self.service_handlers
 
     def get_model(self, model_name):
         model_handle = self.model_mgr.model_handle(model_name)
@@ -54,48 +100,122 @@ class MeshSerialSession(object):
             self.model_handles.append(model_handle)
         return model
 
-    def event_pop(self):
-        if len(self._other_events) > 0:
-            return self._other_events.pop()
-        return None
-
     def event_filter_add(self, event_filter):
-        self._event_filter |= set(event_filter)
+        pass # Deprecated
 
     def event_filter_remove(self, event_filter):
-        self._event_filter -= set(event_filter)
+        pass # Deprecated
 
     def event_filter_disable(self):
-        self._event_filter_enabled = False
+        pass # Deprecated
 
     def event_filter_enable(self):
-        self._event_filter_enabled = True
+        pass # Deprecated
 
     def device_port_get(self):
         return self.acidev.serial.port
 
+    def start(self):
+        if not self.is_alive():
+            super().start()
+        self.wake_up_worker.set()
+
+    def stop(self):
+        self.wake_up_worker.clear()
+
+    def join(self):
+        self.stop()
+        if self.is_alive():
+            super().join()
+
+    def __time_ms(self):
+        return time.time_ns() // 1000000
+
+    def __put(self, queue, x):
+        queue.append(x)
+
+    def put_command(self, cmd):
+        self.__put(self.cmd_queue, cmd)
+
+    def put_event(self, evt):
+        self.__put(self.event_queue, evt)
+
+    def put_command_response(self, rsp):
+        self.__put(self.cmdrsp_queue, rsp)
+
+    def add_service(self, opcode, func, cond, destructor=None):
+        if not opcode in self.service_handlers:
+            self.service_handlers[opcode] = deque()
+        service_handler = ServiceHandler(func, cond, destructor)
+        self.service_handlers[opcode].append(service_handler)
+        return service_handler
+
+    def remove_service(self, opcode, service_handler):
+        try:
+            self.service_handlers[opcode].remove(service_handler)
+        except ValueError:
+            self.aci.logger.debug("Service {}({}) is not registered.".format(opcode, service_handler))
+
+    def run(self):
+        while True:
+            self.wake_up_worker.wait()
+            self.__receive_command_responses()
+            self.__receive_events()
+            self.__send_commands()
+            completed_time = self.__time_ms()
+            sleep_time = (self.__quantum - completed_time % self.__quantum) / 1000
+            time.sleep(sleep_time)
+
+    def __send_commands(self):
+        if len(self.cmd_queue) > 0:
+            commands, self.cmd_queue = self.cmd_queue, deque()
+            for cmd in commands:
+                if hasattr(aci_cmd, cmd.__class__.__name__):
+                    self.acidev.write_aci_cmd(cmd)
+                else:
+                    raise RuntimeError("%s aci command is not defined" % cmd.__class__.__name__)
+
+    def __receive_command_responses(self):
+        if len(self.cmdrsp_queue) > 0:
+            responses, self.cmdrsp_queue = self.cmdrsp_queue, deque()
+            for rsp in responses:
+                if hasattr(aci_cmd, rsp.__class__.__name__):
+                    # Command response must be received by one request.
+                    if not rsp._opcode in self.service_handlers:
+                        self.logger.info("Unknown response for %s is received", rsp._command_name)
+                        continue
+                    for svc in self.service_handlers[rsp._opcode]:
+                        if svc.filter():
+                            svc.put({'opcode':rsp._opcode, 'data':rsp._data})
+                else:
+                    raise RuntimeError("%s aci command responses is not defined" % rsp.__class__.__name__)
+
+    def __receive_events(self):
+        if len(self.event_queue) > 0:
+            events, self.event_queue = self.event_queue, deque()
+            for evt in events:
+                if not evt['opcode'] in self.service_handlers:
+                    self.logger.info("No handle for %s", evt['opcode'])
+                    continue    # No waiting for evt
+                for svc in self.service_handlers[evt['opcode']]:
+                    if svc.filter(evt['meta']):
+                        svc.put(evt)
+
     def __event_handler(self, event):
-        if self._event_filter_enabled and event._opcode in self._event_filter:
-            # Ignore event
-            return -1
-        if event._opcode == evt.Event.DEVICE_STARTED:
+        if event._opcode == aci_evt.Event.DEVICE_STARTED:
             self.logger.info("Device rebooted.")
 
-        elif event._opcode == evt.Event.CMD_RSP:
+        elif event._opcode == aci_evt.Event.CMD_RSP:
             if event._data["status"] != 0:
                 self.logger.error("{}: {}".format(
-                    cmd.response_deserialize(event),
+                    aci_cmd.response_deserialize(event),
                     STATUS_CODE_LUT[event._data["status"]]["code"]))
-                return -1
             else:
-                data = cmd.response_deserialize(event)
+                data = aci_cmd.response_deserialize(event)
                 text = str(data)
                 if text == "None":
                     text = "Success"
-                self.cmdrsp_queue.append(data)
+                self.put_command_response(data)
                 self.logger.info(text)
         else:
-            if self.print_event_on and event is not None:
-                self.logger.info(str(event))
-            self._other_events.append(event)
-        return 0
+            self.logger.info("Not handling event: " + str(event))

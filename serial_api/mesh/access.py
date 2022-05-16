@@ -219,9 +219,9 @@ class Access(object):
                     opcode = message.opcode_raw
                     handler = model.handlers[opcode.hex()]
                     data = handler(opcode, message)
-                    self.aci.event_queue.append({'opcode':message.opcode_raw,
-                                                 'meta':message.meta,
-                                                 'data':data})
+                    self.aci.put_event({'opcode':message.opcode_raw.hex(),
+                                        'meta':message.meta,
+                                        'data':data})
                 except KeyError:
                     self.aci.logger.debug("Message {} unknown for model {}.".format(message, self))
                     pass

@@ -2050,4 +2050,4 @@ def response_deserialize(rsp):
     if len(rsp._data["data"]) > 0:
         return response["object"](rsp._data["data"])
     else:
-        return response["name"]
+        return ResponsePacket(response["name"], rsp._data["opcode"], {})
