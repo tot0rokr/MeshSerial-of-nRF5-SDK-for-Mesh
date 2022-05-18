@@ -126,6 +126,7 @@ class Uart(threading.Thread, Device):
         threading.Thread.__init__(self)
         if not device_name:
             device_name = port
+        self.port = port
         self.device_name = device_name
         logger = logging.getLogger(self.device_name)
         Device.__init__(self, self.device_name, logger=logger)
