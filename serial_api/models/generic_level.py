@@ -10,7 +10,7 @@ class GenericLevelClient(Model):
     GENERIC_DELTA_SET = Opcode(0x8209, None, "Generic Delta Set")
     GENERIC_DELTA_SET_UNACKNOWLEDGED = Opcode(0x820A, None, "Generic Delta Set Unacknowledged")
     GENERIC_MOVE_SET = Opcode(0x820B, None, "Generic Move Set")
-    GENERIC_Move_SET_UNACKNOWLEDGED = Opcode(0x820C, None, "Generic Move Set Unacknowledged")
+    GENERIC_MOVE_SET_UNACKNOWLEDGED = Opcode(0x820C, None, "Generic Move Set Unacknowledged")
 
     def __init__(self):
         self.opcodes = [
