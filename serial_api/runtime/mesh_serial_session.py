@@ -5,6 +5,7 @@ import aci.aci_evt as aci_evt
 from mesh import access
 
 from runtime.model_mgr import ModelMgr
+from mesh.handle_mgr import HandleMgr
 from collections import deque
 import threading
 import time
@@ -58,6 +59,11 @@ class MeshSerialSession(threading.Thread):
         self.daemon = True
 
         self.acidev = acidev
+        # TODO: This must be modified.
+        #       Because device doesn't depend on the session.
+        self.acidev.write_aci_cmd(aci_cmd.RadioReset())
+        # self.token = 1
+
         self.CONFIG = config
         self.logger = logger
         self.send = self.put_command
@@ -87,14 +93,12 @@ class MeshSerialSession(threading.Thread):
         # We add it after all the member variables has been defined
         self.acidev.add_packet_recipient(self.__event_handler)
 
+        self.handle_mgr = HandleMgr(self, prov_db)
+
     def __del__(self):
         self.join()
         del self.access
-        del self.cmdrsp_queue
-        del self.event_queue
-        del self.wake_up_worker
-        del self.model_mgr
-        del self.service_handlers
+        del self.handle_mgr
 
     def get_model(self, model_name):
         model_handle = self.model_mgr.model_handle(model_name)
@@ -105,6 +109,37 @@ class MeshSerialSession(threading.Thread):
             self.model_add(model)
             self.model_handles.append(model_handle)
         return model
+
+    def run_model(self, app_handle, addr_handle, message):
+        model = self.get_model(message.model_name)
+        if model is None:
+            raise Exception("%s is not found" % message.model_name)
+        op = getattr(model, message.op)
+
+
+        model.publish_set(app_handle, addr_handle)
+
+        #  waiting_token = self.token
+        #  self.token += 1
+        #  packet_send_filter = lambda x: x['data']['token'] == waiting_token
+        #  packet_send_service = self.add_service(0xAB, None, packet_send_filter)
+        #  tx_complete_filter = lambda x: x['data']['token'] == waiting_token
+        #  tx_complete_service = self.add_service('tx_complete', None, tx_complete_filter)
+
+        if message.arg is None:
+            op()
+        elif isinstance(message.arg, dict):
+            op(**message.arg)
+        elif isinstance(message.arg, list):
+            op(*message.arg)
+        else:
+            raise Exception("run_model: Invalid Arguments of {}{}".format(
+                            message.model_name, message.op))
+
+        #  packet_send_service(6)
+        #  tx_complete_service(6)
+
+        #  return waiting_token
 
     def event_filter_add(self, event_filter):
         pass # Deprecated
