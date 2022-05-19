@@ -232,11 +232,11 @@ class Provisioner(ProvDevice):
 
         self.iaci.send(cmd.AddrLocalUnicastSet(self.__address, 1))
 
-        for key in self.prov_db.net_keys:
-            self.iaci.send(cmd.SubnetAdd(key.index,
-                                         key.key))
-        for key in self.prov_db.app_keys:
-            self.iaci.send(cmd.AppkeyAdd(key.index, key.bound_net_key, key.key))
+        #  for key in self.prov_db.net_keys:
+            #  self.iaci.send(cmd.SubnetAdd(key.index,
+                                         #  key.key))
+        #  for key in self.prov_db.app_keys:
+            #  self.iaci.send(cmd.AppkeyAdd(key.index, key.bound_net_key, key.key))
 
     def scan_start(self):
         """Starts scanning for unprovisioned beacons."""
@@ -327,19 +327,24 @@ class Provisioner(ProvDevice):
             self.logger.info("\tAddress(es): " + address_range)
             self.logger.info("\tDevice key: {}".format(event._data["device_key"].hex()))
             self.logger.info("\tNetwork key: {}".format(event._data["net_key"].hex()))
-            self.logger.info("Adding device key to subnet %d", event._data["net_key_index"])
+            #  self.logger.info("Adding device key to subnet %d", event._data["net_key_index"])
             # Devkey added to subnet 0.
-            self.iaci.send(cmd.DevkeyAdd(event._data["address"], 0,
-                                         event._data["device_key"]))
+            #  self.iaci.send(cmd.DevkeyAdd(event._data["address"], 0,
+                                         #  event._data["device_key"]))
 
-            self.logger.info("Adding publication address of root element")
-            self.iaci.send(cmd.AddrPublicationAdd(event._data["address"]))
+            #  self.logger.info("Adding publication address of root element")
+            #  self.iaci.send(cmd.AddrPublicationAdd(event._data["address"]))
 
             self.__session_data["device_key"] = event._data["device_key"]
             self.store(self.__session_data)
 
             # Update address to the next in range
             self.__next_free_address += num_elements
+
+            if hasattr(self.iaci, 'put_event'):
+                self.iaci.put_event({'opcode':'provision_complete',
+                                     'meta': {},
+                                     'data': {'unicast_address': event._data["address"]}})
 
         else:
             self.default_handler(event)
