@@ -243,7 +243,12 @@ class MeshSerialSession(threading.Thread):
                 text = str(data)
                 if text == "None":
                     text = "Success"
-                self.put_command_response(data)
+                else:
+                    self.put_command_response(data)
                 self.logger.info(text)
-        else:
-            self.logger.info("Not handling event: " + str(event))
+        #  elif event._opcode == aci_evt.Event.MESH_TX_COMPLETE:
+            #  self.put_event({'opcode':'tx_complete',
+                            #  'meta': {},
+                            #  'data': {'token':event._data['token']}})
+        #  else:
+            #  self.logger.debug("event_handler: " + str(event))
