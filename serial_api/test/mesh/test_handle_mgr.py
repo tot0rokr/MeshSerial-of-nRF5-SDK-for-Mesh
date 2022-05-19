@@ -6,6 +6,7 @@ import threading
 
 import time
 
+@unittest.skip("Deprecated")
 class TestHandleMgr(unittest.TestCase):
     def setUp(self):
         self.mgr = HandleMgr()
