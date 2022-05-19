@@ -149,6 +149,18 @@ class MeshSerialSession(threading.Thread):
     def put_command_response(self, rsp):
         self.__put(self.cmdrsp_queue, rsp)
 
+    def __get(self, queue):
+        return queue.popleft()
+
+    def get_command(self):
+        return self.__get(self.cmd_queue)
+
+    def get_event(self):
+        return self.__get(self.event_queue)
+
+    def get_command_response(self):
+        return self.__get(self.cmdrsp_queue)
+
     # This must be called before receiving message
     # Keep this order: run add_service -> receiving message -> call service_handler
     def add_service(self, opcode, func, cond, destructor=None):
@@ -175,39 +187,47 @@ class MeshSerialSession(threading.Thread):
             time.sleep(sleep_time)
 
     def __send_commands(self):
-        if len(self.cmd_queue) > 0:
-            commands, self.cmd_queue = self.cmd_queue, deque()
-            for cmd in commands:
-                if hasattr(aci_cmd, cmd.__class__.__name__):
-                    self.acidev.write_aci_cmd(cmd)
-                else:
-                    raise RuntimeError("%s aci command is not defined" % cmd.__class__.__name__)
+        while True:
+            try:
+                cmd = self.get_command()
+            except IndexError:
+                break
+
+            if hasattr(aci_cmd, cmd.__class__.__name__):
+                self.acidev.write_aci_cmd(cmd)
+            else:
+                raise RuntimeError("%s aci command is not defined" % cmd.__class__.__name__)
 
     def __receive_command_responses(self):
-        if len(self.cmdrsp_queue) > 0:
-            responses, self.cmdrsp_queue = self.cmdrsp_queue, deque()
-            for rsp in responses:
-                if hasattr(aci_cmd, rsp.__class__.__name__):
-                    # Command response must be received by one request.
-                    if not rsp._opcode in self.service_handlers:
-                        self.logger.info("Unknown response for %s is received", rsp._command_name)
-                        continue
-                    for svc in self.service_handlers[rsp._opcode]:
-                        if svc.filter():
-                            svc.put({'opcode':rsp._opcode, 'data':rsp._data})
-                else:
-                    raise RuntimeError("%s aci command responses is not defined" % rsp.__class__.__name__)
+        while True:
+            try:
+                rsp = self.get_command_response()
+            except IndexError:
+                break
+
+            # Command response must be received by one request.
+            if not rsp._opcode in self.service_handlers:
+                self.logger.debug("receive_command_responses: Unknown response for %s is received",
+                                 rsp._command_name)
+                continue
+            for svc in self.service_handlers[rsp._opcode]:
+                data = {'opcode':rsp._opcode, 'data':rsp._data}
+                if svc.filter(data):
+                    svc.put(data)
 
     def __receive_events(self):
-        if len(self.event_queue) > 0:
-            events, self.event_queue = self.event_queue, deque()
-            for evt in events:
-                if not evt['opcode'] in self.service_handlers:
-                    self.logger.info("No handle for %s", evt['opcode'])
-                    continue    # No waiting for evt
-                for svc in self.service_handlers[evt['opcode']]:
-                    if svc.filter(evt['meta']):
-                        svc.put(evt)
+        while True:
+            try:
+                evt = self.get_event()
+            except IndexError:
+                break
+
+            if not evt['opcode'] in self.service_handlers:
+                self.logger.debug("receive_events: No handle for %s", evt['opcode'])
+                continue    # No waiting for evt
+            for svc in self.service_handlers[evt['opcode']]:
+                if svc.filter(evt):
+                    svc.put(evt)
 
     def __event_handler(self, event):
         if event._opcode == aci_evt.Event.DEVICE_STARTED:
