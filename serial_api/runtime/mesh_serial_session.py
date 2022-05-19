@@ -116,7 +116,7 @@ class MeshSerialSession(threading.Thread):
         return self.acidev.serial.port
 
     def start(self):
-        if not self.is_alive():
+        if self.ident is None:
             super().start()
         self.wake_up_worker.set()
 
@@ -125,7 +125,7 @@ class MeshSerialSession(threading.Thread):
 
     def join(self):
         self.stop()
-        if self.is_alive():
+        if self.ident is not None:
             super().join()
 
     def __time_ms(self):
