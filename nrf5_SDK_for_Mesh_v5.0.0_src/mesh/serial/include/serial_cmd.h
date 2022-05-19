@@ -495,6 +495,7 @@ typedef struct __attribute((packed))
 /** Mesh packet send command parameters. */
 typedef struct __attribute((packed))
 {
+    uint32_t serial_tid;                /**< Serial transaction id. */
     uint16_t appkey_handle;             /**< Appkey or devkey handle to use for packet sending. Subnetwork will be picked automatically. */
     uint16_t src_addr;                  /**< Raw unicast address to use as source address. Must be in the range of local unicast addresses. */
     uint16_t dst_addr_handle;           /**< Handle of destination address to use in packet. */

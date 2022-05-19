@@ -298,6 +298,7 @@ typedef struct __attribute((packed))
 typedef struct __attribute((packed))
 {
     nrf_mesh_tx_token_t token; /**< TX Token assigned to the packet. Can be used to resolve which packet a @ref SERIAL_OPCODE_EVT_MESH_TX_COMPLETE event refers to. */
+    uint32_t serial_tid;       /**< Serial transaction id. Can be know which models refer to */
 } serial_evt_cmd_rsp_data_packet_send_t;
 
 /** Command response to @ref SERIAL_OPCODE_CMD_MESH_NET_STATE_GET with the current net state */

@@ -383,6 +383,7 @@ static void handle_cmd_packet_send(const serial_packet_t * p_cmd)
 
     serial_evt_cmd_rsp_data_packet_send_t rsp;
     rsp.token = nrf_mesh_unique_token_get();
+    rsp.serial_tid = p_cmd->payload.cmd.mesh.packet_send.serial_tid;
 
     uint32_t status = dsm_address_get(p_cmd->payload.cmd.mesh.packet_send.dst_addr_handle, &tx_params.dst);
     if (status == NRF_SUCCESS)

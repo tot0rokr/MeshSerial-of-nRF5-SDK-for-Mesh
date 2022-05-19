@@ -905,8 +905,9 @@ class PacketSend(CommandPacket):
         data : uint8_t[244]
             Payload of the packet.
     """
-    def __init__(self, appkey_handle, src_addr, dst_addr_handle, ttl, force_segmented, transmic_size, friendship_credential_flag, data):
+    def __init__(self, serial_tid, appkey_handle, src_addr, dst_addr_handle, ttl, force_segmented, transmic_size, friendship_credential_flag, data):
         __data = bytearray()
+        __data += struct.pack("<L", serial_tid)
         __data += struct.pack("<H", appkey_handle)
         __data += struct.pack("<H", src_addr)
         __data += struct.pack("<H", dst_addr_handle)
@@ -1791,6 +1792,7 @@ class PacketSendRsp(ResponsePacket):
     def __init__(self, raw_data):
         __data = {}
         __data["token"], = struct.unpack("<I", raw_data[0:4])
+        __data["serial_tid"], = struct.unpack("<I", raw_data[4:8])
         super(PacketSendRsp, self).__init__("PacketSend", 0xAB, __data)
 
 
