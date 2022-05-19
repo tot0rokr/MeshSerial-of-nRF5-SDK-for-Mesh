@@ -116,3 +116,9 @@ class MeshDB(object):
                 return key
 
         return None
+
+    def find_devkey(self, unicast_address):
+        for node in self.nodes:
+            if node.unicast_address == unicast_address:
+                return node.device_key
+        return None
