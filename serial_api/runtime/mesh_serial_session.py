@@ -25,12 +25,18 @@ class ServiceHandler(object):
         if self.destructor is not None:
             self.destructor(self)
 
-    def __call__(self, timeout=None):
+    def __call__(self, timeout=None, *args):
         self.event.wait(timeout)
         if not self.event.is_set():
             raise Exception("It does receive any response for timeout")
         data, self.data = self.data, None
-        return self.func(data)
+        self.event.clear()
+        if self.func is not None:
+            if len(args) > 0:
+                return self.func(data, *args)
+            else:
+                return self.func(data)
+        return None
 
     def filter(self, *args):
         #  print(*args)
@@ -143,6 +149,8 @@ class MeshSerialSession(threading.Thread):
     def put_command_response(self, rsp):
         self.__put(self.cmdrsp_queue, rsp)
 
+    # This must be called before receiving message
+    # Keep this order: run add_service -> receiving message -> call service_handler
     def add_service(self, opcode, func, cond, destructor=None):
         if not opcode in self.service_handlers:
             self.service_handlers[opcode] = deque()
@@ -154,7 +162,7 @@ class MeshSerialSession(threading.Thread):
         try:
             self.service_handlers[opcode].remove(service_handler)
         except ValueError:
-            self.aci.logger.debug("Service {}({}) is not registered.".format(opcode, service_handler))
+            self.aci.logger.error("remove_service: Service {}({}) is not registered.".format(opcode, service_handler))
 
     def run(self):
         while True:
