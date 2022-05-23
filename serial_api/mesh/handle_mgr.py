@@ -80,16 +80,17 @@ class HandleMgr(object):
         def __put_handle(handle):
             self.send(aci_cmd.SubnetDelete(handle))
             return self.__net_delete_handler()
-        if self.nethandle_allocator.reset_handle(handle, __put_handle) != handle:
-            raise RuntimeError("put_net_handle: handle: {}".format(handle))
+        ret = self.nethandle_allocator.reset_handle(handle, __put_handle)
+        #  if ret != handle:
+            #  raise RuntimeError("put_net_handle: handle: {}, ret: {}".format(handle, ret))
 
     def get_app_handle(self, application):
         if application < 0: # device handle
             return self.get_device_handle(-application)
         else:
-            def __get_handle(addr):
-                net_handle = self.get_net_handle(self.prov_db.find_appkey(addr).bound_net_key)
-                self.send(aci_cmd.AppkeyAdd(addr, net_handle, self.prov_db.find_appkey(addr).key))
+            def __get_handle(key_index):
+                net_handle = self.get_net_handle(self.prov_db.find_appkey(key_index).bound_net_key)
+                self.send(aci_cmd.AppkeyAdd(key_index, net_handle, self.prov_db.find_appkey(key_index).key))
                 return self.__app_add_handler()
             return self.apphandle_allocator.set_handle(application, __get_handle)
 
@@ -98,13 +99,15 @@ class HandleMgr(object):
             self.put_device_handle(handle)
         else: # appkey handle (0~7)
             def __put_handle(handle):
-                net_handle = self.get_net_handle(self.prov_db.find_appkey(addr).bound_net_key)
-                self.put_net_handle(net_handle)
-                self.put_net_handle(net_handle)
+                # TODO: Decrease netkey ref count
+                #  net_handle = self.get_net_handle(self.prov_db.find_appkey(addr).bound_net_key)
+                #  self.put_net_handle(net_handle)
+                #  self.put_net_handle(net_handle)
                 self.send(aci_cmd.AppkeyDelete(handle))
                 return self.__app_delete_handler()
-            if self.apphandle_allocator.reset_handle(handle, __put_handle) != handle:
-                raise RuntimeError("put_app_handle: handle: {}".format(handle))
+            ret = self.apphandle_allocator.reset_handle(handle, __put_handle)
+            #  if ret != handle:
+                #  raise RuntimeError("put_app_handle: handle: {}, ret: {}".format(handle, ret))
 
     def get_device_handle(self, node_address):
         def __get_handle(addr):
@@ -120,8 +123,9 @@ class HandleMgr(object):
             self.send(aci_cmd.DevkeyDelete(handle))
             return self.__dev_delete_handler()
 
-        if self.devhandle_allocator.reset_handle(handle, __put_handle) != handle:
-            raise RuntimeError("put_device_handle: handle: {}".format(handle))
+        ret = self.devhandle_allocator.reset_handle(handle, __put_handle)
+        #  if ret != handle:
+            #  raise RuntimeError("put_device_handle: handle: {}, ret: {}".format(handle, ret))
 
     def get_address_pub_handle(self, address):
         def __get_handle(addr):
@@ -135,5 +139,6 @@ class HandleMgr(object):
             self.send(aci_cmd.AddrPublicationRemove(handle))
             return self.__addr_pub_remove_handler()
 
-        if self.addrhandle_allocator.reset_handle(handle, __put_handle) != handle:
-            raise RuntimeError("put_device_handle: handle: {}".format(handle))
+        ret = self.addrhandle_allocator.reset_handle(handle, __put_handle)
+        #  if ret != handle:
+            #  raise RuntimeError("put_device_handle: handle: {}, ret: {}".format(handle, ret))

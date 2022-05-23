@@ -54,6 +54,7 @@ class DumpDevice(object):
 
     def write_aci_cmd(self, cmd):
         if isinstance(cmd, CommandPacket):
+            self.logger.info('cmd: %s', str(cmd))
             return cmd.serialize()
         else:
             self.logger.error('The command provided is not valid: %s\nIt must be an instance of the CommandPacket class (or one of its subclasses)', str(cmd))

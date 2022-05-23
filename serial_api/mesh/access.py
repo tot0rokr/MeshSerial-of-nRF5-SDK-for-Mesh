@@ -145,7 +145,6 @@ class Model(object):
         self.force_segmented = self.DEFAULT_FORCE_SEGMENTED
         self.transmic_size = self.DEFAULT_TRANSMIC_SIZE
         self.friendship_credentials_flag = self.DEFAULT_CREDENTIALS_FLAG
-        self.serial_tid = SerialTid()
 
     def publish_set(self, key_handle, address_handle):
         """Sets the publication state for the model.
@@ -170,7 +169,8 @@ class Model(object):
         message = opcode.serialize()
         message += data
 
-        tid = self.serial_tid.tid
+        tid = self.element.serial_tid.tid
+
         self.element.access.aci.send(
             cmd.PacketSend(tid,
                            self.key_handle,
@@ -181,14 +181,16 @@ class Model(object):
                            self.transmic_size,
                            self.friendship_credentials_flag,
                            message))
+        #  print("PacketSend: tid =", tid)
         return tid
 
 
 class Element(object):
-    def __init__(self, access, address):
+    def __init__(self, access, address, serial_tid):
         self.models = []
         self.access = access
         self.address = address
+        self.serial_tid = serial_tid
 
     def model_add(self, model):
         if not isinstance(model, Model):
@@ -203,7 +205,8 @@ class Element(object):
 class Access(object):
     def __init__(self, aci, element_address, num_elements=1):
         self.aci = aci
-        self.elements = [Element(self, element_address + i) for i in range(num_elements)]
+        self.serial_tid = SerialTid()
+        self.elements = [Element(self, element_address + i, self.serial_tid) for i in range(num_elements)]
         self.aci.acidev.add_packet_recipient(self.__event_handler)
         self.aci.event_filter_add([Event.MESH_MESSAGE_RECEIVED_UNICAST])
 
@@ -230,25 +233,31 @@ class Access(object):
                     self.aci.logger.debug("Message {} unknown for model {}.".format(message, self))
                     pass
 
+
+import threading
 class SerialTid(object):
-    INITIAL_TOKEN = 0x00000000
-    BORDER_TOKEN  = 0x0000FFFE
-    TOKEN_MASK    = 0x0000FFFF
-    ID_MASK       = 0xFFFF0000
-    ID_SHIFT      = 16
-    __next_id     = 0
+    #  __instance = None
+
+    #  def __new__(cls, *args, **kwargs):
+        #  if not isinstance(cls.__instance, cls):
+            #  cls.__instance = super().__new__(cls, *args, **kwargs)
+            #  cls.__instance.__lock = threading.RLock()
+            #  cls.__instance.INITIAL_TOKEN = 0x00000000
+            #  cls.__instance.BORDER_TOKEN  = 0xFFFFFFFE
+        #  return cls.__instance
 
     def __init__(self):
-        if SerialTid.__next_id >= 0xFFFF:
-            raise RuntimeError("No more SerialTid")
-        self.__id = SerialTid.__next_id
-        SerialTid.__next_id += 1
-        self.__tid = SerialTid.INITIAL_TOKEN + self.__id << SerialTid.ID_SHIFT
+        self.__lock = threading.RLock()
+        self.INITIAL_TOKEN = 0x00000000
+        self.BORDER_TOKEN  = 0xFFFFFFFE
+        self.__tid = self.INITIAL_TOKEN
 
     @property
     def tid(self):
-        self.__tid += 1
-        if self.__tid & SerialTid.TOKEN_MASK == SerialTid.BORDER_TOKEN:
-            self.__tid &= SerialTid.ID_MASK
+        with self.__lock as lock:
             self.__tid += 1
-        return self.__tid
+            if self.__tid == self.BORDER_TOKEN:
+                self.__tid = self.INITIAL_TOKEN
+                self.__tid += 1
+            _tid = self.__tid
+        return _tid

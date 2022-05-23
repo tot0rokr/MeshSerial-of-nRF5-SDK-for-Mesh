@@ -19,10 +19,10 @@ from aci.aci_uart import Uart
 from aci.aci_config import ApplicationConfig
 
 #  from mesh import access
-from mesh.provisioning import Provisioner, Provisionee  # NOQA: ignore unused import
 from mesh import types as mt                            # NOQA: ignore unused import
 from mesh.database import MeshDB                        # NOQA: ignore unused import
-from runtime.mesh_serial import MeshSerial
+#  from runtime.mesh_serial import MeshSerial
+from runtime.local_mesh_serial import LocalMeshSerial
 
 USAGE_STRING = \
     """
@@ -36,9 +36,9 @@ USAGE_STRING += colorama.Style.RESET_ALL
 
 def start_ipython(options):
     colorama.init()
-    comports = options.devices
-    device_handles = list()
-    session_handles = list()
+    #  comports = options.devices
+    #  device_handles = list()
+    #  session_handles = list()
 
     # Print out a mini intro to the interactive session --
     # Start with white and then magenta to keep the session white
@@ -49,22 +49,26 @@ def start_ipython(options):
 
     print(USAGE_STRING.format(**colors))
 
-    CONFIG = ApplicationConfig(
-        header_path=os.path.join(os.path.dirname(sys.argv[0]),
-                                 ("../nrf5_SDK_for_Mesh_v5.0.0_src/examples/serial/include/"
-                                  + "nrf_mesh_config_app.h")))
+    #  CONFIG = ApplicationConfig(
+        #  header_path=os.path.join(os.path.dirname(sys.argv[0]),
+                                 #  ("../nrf5_SDK_for_Mesh_v5.0.0_src/examples/serial/include/"
+                                  #  + "nrf_mesh_config_app.h")))
 
-    mesh = MeshSerial(options, CONFIG)
+    #  mesh = MeshSerial(options, CONFIG)
 
-    for dev_com in comports:
-        device_handles.append(mesh.create_device(Uart(port=dev_com,
-                                         baudrate=options.baudrate,
-                                         device_name=dev_com.split("/")[-1])))
+    #  for dev_com in comports:
+        #  device_handles.append(mesh.create_device(Uart(port=dev_com,
+                                         #  baudrate=options.baudrate,
+                                         #  device_name=dev_com.split("/")[-1])))
 
     db = MeshDB("database/test_database.json")
-    session_handles.append(mesh.create_session(device_handles[0], db))
-    mesh.initialize_provisioner(session_handles[0], db)
-    mesh.start_session(session_handles[0])
+    mesh = LocalMeshSerial(options, db)
+    #  session_handles.append(mesh.create_session(device_handles[0], db))
+    mesh_manager_handle = mesh.connect_session(0)
+    #  mesh.initialize_provisioner(session_handles[0], db)
+    mesh.set_provisioner(mesh_manager_handle)
+    #  mesh.start_session(session_handles[0])
+    mesh.start_session(mesh_manager_handle)
 
     # Set iPython configuration
     ipython_config = traitlets.config.get_config()
@@ -87,11 +91,12 @@ def start_ipython(options):
 
     IPython.embed(config=ipython_config)
     # TODO: session delete
-    for dev in device_handles:
-        mesh.device_mgr.remove_device(dev)
+    #  for dev in device_handles:
+        #  mesh.device_mgr.remove_device(dev)
 
-    for ses in session_handles:
-        mesh.session_mgr.remove_session(ses)
+    #  for ses in session_handles:
+        #  mesh.session_mgr.remove_session(ses)
+    del mesh
 
     raise SystemExit(0)
 

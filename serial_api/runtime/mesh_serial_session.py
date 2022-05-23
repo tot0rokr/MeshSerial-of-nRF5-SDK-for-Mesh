@@ -29,14 +29,11 @@ class ServiceHandler(object):
     def __call__(self, timeout=None, *args):
         self.event.wait(timeout)
         if not self.event.is_set():
-            raise Exception("It does receive any response for timeout")
+            raise TimeoutError("It does receive any response for timeout")
         data, self.data = self.data, None
         self.event.clear()
-        if self.func is not None:
-            if len(args) > 0:
-                return self.func(data, *args)
-            else:
-                return self.func(data)
+        if callable(self.func):
+            return self.func(data, *args)
         return None
 
     def filter(self, *args):
@@ -62,7 +59,6 @@ class MeshSerialSession(threading.Thread):
         # TODO: This must be modified.
         #       Because device doesn't depend on the session.
         self.acidev.write_aci_cmd(aci_cmd.RadioReset())
-        # self.token = 1
 
         self.CONFIG = config
         self.logger = logger
@@ -95,6 +91,21 @@ class MeshSerialSession(threading.Thread):
 
         self.handle_mgr = HandleMgr(self, prov_db)
 
+        #  self.map_packet_send_rsp = [None for _ in range(1000)]
+        #  self.map_tx_completed    = [None for _ in range(1000)]
+        #  packet_send_cb      = lambda x: (self.map_packet_send_rsp[x['data']['serial_tid'] % 1000] = x['data']['token'])
+        #  packet_send_service = self.add_service(0xAB, packet_send_cb, None)
+        #  tx_complete_cb      = lambda x: (self.map_tx_completed[x['data']['token'] % 1000] = x['data']['token'])
+        #  tx_complete_service = self.add_service('tx_complete', tx_complete_cb, None)
+        self.map_packet_send_rsp = [None for _ in range(1000)]
+        self.map_tx_completed    = [None for _ in range(1000)]
+        def packet_send_cb(x):
+            self.map_packet_send_rsp[x['data']['serial_tid'] % 1000] = x['data']['token']
+        self.packet_send_service = self.add_service(0xAB, packet_send_cb, None)
+        def tx_complete_cb(x):
+            self.map_tx_completed[x['data']['token'] % 1000] = x['data']['token']
+        self.tx_complete_service = self.add_service('tx_complete', tx_complete_cb, None)
+
     def __del__(self):
         self.join()
         del self.access
@@ -110,36 +121,35 @@ class MeshSerialSession(threading.Thread):
             self.model_handles.append(model_handle)
         return model
 
-    def run_model(self, app_handle, addr_handle, message):
+    def send_message(self, app_handle, addr_handle, message):
         model = self.get_model(message.model_name)
         if model is None:
             raise Exception("%s is not found" % message.model_name)
         op = getattr(model, message.op)
 
-
         model.publish_set(app_handle, addr_handle)
 
-        #  waiting_token = self.token
-        #  self.token += 1
-        #  packet_send_filter = lambda x: x['data']['token'] == waiting_token
-        #  packet_send_service = self.add_service(0xAB, None, packet_send_filter)
-        #  tx_complete_filter = lambda x: x['data']['token'] == waiting_token
-        #  tx_complete_service = self.add_service('tx_complete', None, tx_complete_filter)
-
-        if message.arg is None:
-            op()
-        elif isinstance(message.arg, dict):
-            op(**message.arg)
-        elif isinstance(message.arg, list):
-            op(*message.arg)
+        if message.args is None:
+            serial_tid = op()
+        elif isinstance(message.args, dict):
+            serial_tid = op(**message.args)
+        elif isinstance(message.args, (list, tuple, set)):
+            serial_tid = op(*message.args)
         else:
-            raise Exception("run_model: Invalid Arguments of {}{}".format(
+            raise Exception("send_message: Invalid Arguments of {}.{}".format(
                             message.model_name, message.op))
 
-        #  packet_send_service(6)
-        #  tx_complete_service(6)
+        self.packet_send_service(6)
+        while self.map_packet_send_rsp[serial_tid % 1000] is None:
+            time.sleep(0.2)
+        token = self.map_packet_send_rsp[serial_tid % 1000]
+        self.map_packet_send_rsp[serial_tid % 1000] = None
 
-        #  return waiting_token
+        self.tx_complete_service(6)
+        while self.map_tx_completed[token % 1000] is None:
+            time.sleep(0.2)
+        self.map_tx_completed[token % 1000] = None
+        self.logger.debug("complete send message")
 
     def event_filter_add(self, event_filter):
         pass # Deprecated
@@ -262,6 +272,7 @@ class MeshSerialSession(threading.Thread):
                 continue    # No waiting for evt
             for svc in self.service_handlers[evt['opcode']]:
                 if svc.filter(evt):
+                    self.logger.debug("receive_events: %r", evt)
                     svc.put(evt)
 
     def __event_handler(self, event):
@@ -281,9 +292,9 @@ class MeshSerialSession(threading.Thread):
                 else:
                     self.put_command_response(data)
                 self.logger.info(text)
-        #  elif event._opcode == aci_evt.Event.MESH_TX_COMPLETE:
-            #  self.put_event({'opcode':'tx_complete',
-                            #  'meta': {},
-                            #  'data': {'token':event._data['token']}})
+        elif event._opcode == aci_evt.Event.MESH_TX_COMPLETE:
+            self.put_event({'opcode':'tx_complete',
+                            'meta': {},
+                            'data': {'token':event._data['token']}})
         #  else:
             #  self.logger.debug("event_handler: " + str(event))

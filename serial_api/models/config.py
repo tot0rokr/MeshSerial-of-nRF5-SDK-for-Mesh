@@ -162,7 +162,7 @@ class ConfigurationClient(Model):
         return keys
 
     def composition_data_get(self, page_number=0x00):
-        self.send(self._COMPOSITION_DATA_GET, bytearray([page_number]))
+        return self.send(self._COMPOSITION_DATA_GET, bytearray([page_number]))
 
     def appkey_add(self, appkey_index=0):
         key = self.prov_db.find_appkey(appkey_index)
@@ -174,7 +174,7 @@ class ConfigurationClient(Model):
         message += mt.KeyIndex.pack(netkey_index, appkey_index)
         message += key.key
         self.previous_command = "add"
-        self.send(self._APPKEY_ADD, message)
+        return self.send(self._APPKEY_ADD, message)
 
     def appkey_update(self, appkey_index=0):
         key = self.prov_db.find_appkey(appkey_index)
@@ -186,7 +186,7 @@ class ConfigurationClient(Model):
         message += mt.KeyIndex.pack(netkey_index, appkey_index)
         message += key.key
         self.previous_command = "update"
-        self.send(self._APPKEY_UPDATE, message)
+        return self.send(self._APPKEY_UPDATE, message)
 
     def appkey_delete(self, appkey_index=0):
         key = self.prov_db.find_appkey(appkey_index)
@@ -196,12 +196,12 @@ class ConfigurationClient(Model):
         netkey_index = key.bound_net_key
         key24 = mt.KeyIndex.pack(netkey_index, appkey_index)
         self.previous_command = "delete"
-        self.send(self._APPKEY_DELETE, key24)
+        return self.send(self._APPKEY_DELETE, key24)
 
     def appkey_get(self, netkey_index=0):
         message = bytearray()
         message += mt.KeyIndex.pack(netkey_index)
-        self.send(self._APPKEY_GET, message)
+        return self.send(self._APPKEY_GET, message)
 
     def netkey_add(self, netkey_index=0):
         key = self.prov_db.find_netkey(netkey_index)
@@ -212,7 +212,7 @@ class ConfigurationClient(Model):
         message += mt.KeyIndex.pack(netkey_index)
         message += key.key
         self.previous_command = "add"
-        self.send(self._NETKEY_ADD, message)
+        return self.send(self._NETKEY_ADD, message)
 
     def netkey_update(self, netkey_index=0):
         key = self.prov_db.find_netkey(netkey_index)
@@ -223,15 +223,15 @@ class ConfigurationClient(Model):
         message += mt.KeyIndex.pack(netkey_index)
         message += key.key
         self.previous_command = "update"
-        self.send(self._NETKEY_UPDATE, message)
+        return self.send(self._NETKEY_UPDATE, message)
 
     def netkey_delete(self, netkey_index=0):
         message = mt.KeyIndex.pack(netkey_index)
         self.previous_command = "delete"
-        self.send(self._NETKEY_DELETE, message)
+        return self.send(self._NETKEY_DELETE, message)
 
     def netkey_get(self):
-        self.send(self._NETKEY_GET)
+        return self.send(self._NETKEY_GET)
 
     def model_app_bind(self, element_address, appkey_index, model_id):
         message = bytearray()
@@ -239,7 +239,7 @@ class ConfigurationClient(Model):
         message += mt.KeyIndex.pack(appkey_index)
         message += model_id.pack()
         self.previous_command = "bind"
-        self.send(self._MODEL_APP_BIND, message)
+        return self.send(self._MODEL_APP_BIND, message)
 
     def model_app_unbind(self, element_address, appkey_index, model_id):
         message = bytearray()
@@ -247,16 +247,16 @@ class ConfigurationClient(Model):
         message += mt.KeyIndex.pack(appkey_index)
         message += model_id.pack()
         self.previous_command = "unbind"
-        self.send(self._MODEL_APP_UNBIND, message)
+        return self.send(self._MODEL_APP_UNBIND, message)
 
     def model_app_get(self, element_address, model_id):
         message = bytearray()
         message += struct.pack("<H", element_address)
         message += model_id.pack()
         if model_id.company_id:
-            self.send(self._VENDOR_MODEL_APP_GET, message)
+            return self.send(self._VENDOR_MODEL_APP_GET, message)
         else:
-            self.send(self._SIG_MODEL_APP_GET, message)
+            return self.send(self._SIG_MODEL_APP_GET, message)
 
     def model_publication_set(self, element_address, model_id, publish):
 
@@ -270,15 +270,15 @@ class ConfigurationClient(Model):
 
         # If it's a bytearray, it's a virtual address.
         if isinstance(publish.address, mt.VirtualAddress):
-            self.send(self._MODEL_PUBLICATION_VIRTUAL_ADDRESS_SET, message)
+            return self.send(self._MODEL_PUBLICATION_VIRTUAL_ADDRESS_SET, message)
         else:
-            self.send(self._MODEL_PUBLICATION_SET, message)
+            return self.send(self._MODEL_PUBLICATION_SET, message)
 
     def model_publication_get(self, element_address, model_id):
         message = bytearray()
         message += struct.pack("<H", element_address)
         message += model_id.pack()
-        self.send(self._MODEL_PUBLICATION_GET, message)
+        return self.send(self._MODEL_PUBLICATION_GET, message)
 
     def subscription_message_get(self, element_address, address, model_id):
         message = bytearray()
@@ -300,9 +300,9 @@ class ConfigurationClient(Model):
         self.previous_command = "add"
         # If it's a bytearray, it's a virtual address
         if isinstance(address, bytearray):
-            self.send(self._MODEL_SUBSCRIPTION_VIRTUAL_ADDRESS_ADD, message)
+            return self.send(self._MODEL_SUBSCRIPTION_VIRTUAL_ADDRESS_ADD, message)
         else:
-            self.send(self._MODEL_SUBSCRIPTION_ADD, message)
+            return self.send(self._MODEL_SUBSCRIPTION_ADD, message)
 
     def model_subscription_delete(self, element_address, address, model_id):
         message = self.subscription_message_get(
@@ -310,9 +310,9 @@ class ConfigurationClient(Model):
         self.previous_command = "delete"
         # If it's a bytearray, it's a virtual address
         if isinstance(address, bytearray):
-            self.send(self._MODEL_SUBSCRIPTION_VIRTUAL_ADDRESS_DELETE, message)
+            return self.send(self._MODEL_SUBSCRIPTION_VIRTUAL_ADDRESS_DELETE, message)
         else:
-            self.send(self._MODEL_SUBSCRIPTION_DELETE, message)
+            return self.send(self._MODEL_SUBSCRIPTION_DELETE, message)
 
     def model_subscription_overwrite(self, element_address, address, model_id):
         message = self.subscription_message_get(
@@ -320,118 +320,118 @@ class ConfigurationClient(Model):
         self.previous_command = "overwrite"
         # If it's a bytearray, it's a virtual address
         if isinstance(address, bytearray):
-            self.send(self._MODEL_SUBSCRIPTION_VIRTUAL_ADDRESS_OVERWRITE, message)
+            return self.send(self._MODEL_SUBSCRIPTION_VIRTUAL_ADDRESS_OVERWRITE, message)
         else:
-            self.send(self._MODEL_SUBSCRIPTION_OVERWRITE, message)
+            return self.send(self._MODEL_SUBSCRIPTION_OVERWRITE, message)
 
     def model_subscription_delete_all(self, element_address, model_id):
         message = bytearray()
         message += struct.pack("<H", element_address)
         message += model_id.pack()
         self.previous_command = "delete_all"
-        self.send(self._MODEL_SUBSCRIPTION_DELETE_ALL, message)
+        return self.send(self._MODEL_SUBSCRIPTION_DELETE_ALL, message)
 
     def model_subscription_get(self, element_address, model_id):
         message = bytearray()
         message += struct.pack("<H", element_address)
         message += model_id.pack()
         if model_id.company_id:
-            self.send(self._VENDOR_MODEL_SUBSCRIPTION_GET, message)
+            return self.send(self._VENDOR_MODEL_SUBSCRIPTION_GET, message)
         else:
-            self.send(self._SIG_MODEL_SUBSCRIPTION_GET, message)
+            return self.send(self._SIG_MODEL_SUBSCRIPTION_GET, message)
 
     def key_refresh_phase_get(self, netkey_index):
         message = bytearray()
         message += mt.KeyIndex.pack(netkey_index)
-        self.send(self._KEY_REFRESH_PHASE_GET, message)
+        return self.send(self._KEY_REFRESH_PHASE_GET, message)
 
     def key_refresh_phase_set(self, netkey_index):
         message = bytearray()
         message += mt.KeyIndex.pack(netkey_index)
-        self.send(self._KEY_REFRESH_PHASE_GET, message)
+        return self.send(self._KEY_REFRESH_PHASE_GET, message)
 
     def node_reset(self):
-        self.send(self._NODE_RESET)
+        return self.send(self._NODE_RESET)
 
     def beacon_get(self):
-        self.send(self._BEACON_GET)
+        return self.send(self._BEACON_GET)
 
     def beacon_set(self, state):
         message = bytearray(struct.pack("<B", int(state)))
-        self.send(self._BEACON_SET, message)
+        return self.send(self._BEACON_SET, message)
 
     def default_ttl_get(self):
-        self.send(self._DEFAULT_TTL_GET)
+        return self.send(self._DEFAULT_TTL_GET)
 
     def default_ttl_set(self, ttl):
         message = bytearray(struct.pack("<B", ttl))
-        self.send(self._DEFAULT_TTL_SET, message)
+        return self.send(self._DEFAULT_TTL_SET, message)
 
     def gatt_proxy_get(self):
-        self.send(self._GATT_PROXY_GET)
+        return self.send(self._GATT_PROXY_GET)
 
     def gatt_proxy_set(self, state):
         message = bytearray(struct.pack("<B", int(state)))
-        self.send(self._GATT_PROXY_SET, message)
+        return self.send(self._GATT_PROXY_SET, message)
 
     def relay_get(self):
-        self.send(self._RELAY_GET)
+        return self.send(self._RELAY_GET)
 
     def relay_set(self, state, retransmit_count=0, retransmit_interval_steps=0):
         retransmit = (retransmit_count & 0x07 |
                       (retransmit_interval_steps & 0x1f) << 3)
         message = bytearray(struct.pack("<BB", int(state), retransmit))
-        self.send(self._RELAY_SET, message)
+        return self.send(self._RELAY_SET, message)
 
     def friend_get(self):
-        self.send(self._FRIEND_GET)
+        return self.send(self._FRIEND_GET)
 
     def friend_set(self, state):
         message = bytearray()
         message += struct.pack("<B", int(state))
-        self.send(self._FRIEND_SET, message)
+        return self.send(self._FRIEND_SET, message)
 
     def heartbeat_publication_get(self):
-        self.send(self._HEARTBEAT_PUBLICATION_GET)
+        return self.send(self._HEARTBEAT_PUBLICATION_GET)
 
     def heartbeat_publication_set(self, dst, count, period, ttl=64,
                                   feature_bitfield=0, netkey_index=0):
         message = bytearray()
         message += struct.pack(
             "<HBBBHH", dst, log2b(count), log2b(period), ttl, feature_bitfield, netkey_index)
-        self.send(self._HEARTBEAT_PUBLICATION_SET, message)
+        return self.send(self._HEARTBEAT_PUBLICATION_SET, message)
 
     def heartbeat_subscription_get(self):
-        self.send(self._HEARTBEAT_SUBSCRIPTION_GET)
+        return self.send(self._HEARTBEAT_SUBSCRIPTION_GET)
 
     def heartbeat_subscription_set(self, src, dst, period):
         message = bytearray()
         message += struct.pack("<HHB", src, dst, log2b(period))
-        self.send(self._HEARTBEAT_SUBSCRIPTION_SET, message)
+        return self.send(self._HEARTBEAT_SUBSCRIPTION_SET, message)
 
     def low_power_node_polltimeout_get(self, lpn_address):
         message = bytearray()
         message += struct.pack("<H", lpn_address)
-        self.send(self._LOW_POWER_NODE_POLLTIMEOUT_GET, message)
+        return self.send(self._LOW_POWER_NODE_POLLTIMEOUT_GET, message)
 
     def network_transmit_get(self):
-        self.send(self._NETWORK_TRANSMIT_GET)
+        return self.send(self._NETWORK_TRANSMIT_GET)
 
     def network_transmit_set(self, count=0, interval_steps=1):
         message = bytearray()
         message += struct.pack("<B", mt.NetworkTransmit(count, interval_steps).pack())
-        self.send(self._NETWORK_TRANSMIT_SET, message)
+        return self.send(self._NETWORK_TRANSMIT_SET, message)
 
     def node_identity_get(self, netkey_index):
         message = bytearray()
         message += mt.KeyIndex.pack(netkey_index)
-        self.send(self._NODE_IDENTITY_GET, message)
+        return self.send(self._NODE_IDENTITY_GET, message)
 
     def node_identity_set(self, netkey_index, state):
         message = bytearray()
         message += mt.KeyIndex.pack(netkey_index)
         message += struct.pack("<B", int(state))
-        self.send(self._NODE_IDENTITY_SET, message)
+        return self.send(self._NODE_IDENTITY_SET, message)
 
     def node_get(self, src):
         for node in self.prov_db.nodes:
@@ -696,6 +696,7 @@ class ConfigurationClient(Model):
 
     def __node_reset_status_handler(self, opcode, message):
         self.logger.info("Node %04x was reset", message.meta["src"])
+        return {'src':message.meta['src']}
 
     def __model_sig_app_list_handler(self, opcode, message):
         status, element_address, model_id = struct.unpack(
