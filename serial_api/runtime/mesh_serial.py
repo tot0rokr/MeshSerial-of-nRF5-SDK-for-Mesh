@@ -54,38 +54,38 @@ class MeshSerial(object):
         session.start()
         self.provisioner = Provisioner(session, db)
 
-        self.net_handle = session.handle_mgr.get_net_handle(0)
-        #  self.app_handle = session.handle_mgr.get_app_handle(0)
+        self.net_handle = session.handle_mgr.get_net_handle(0)  # Default NetKey 0
 
-        #  complete_composition_cb = lambda x: x
-        #  self.composition_data_get_service = session.add_service('02', complete_composition_cb, None)
-
-        completed_provision_cb = lambda x: x['data']['unicast_address']
-        self.provision_service = session.add_service('provision_complete', completed_provision_cb, None)
+        #  completed_provision_cb = lambda x: x['data']['unicast_address']
+        #  self.provision_service = session.add_service('provision_complete', completed_provision_cb, None)
 
         session.logger.info("{} session is provisioner".format(session_handle))
 
-    #  def compose_node(self, node_address):
-        #  session = self.provisioner.iaci
-        #  message = Command('ConfigurationClient', 'composition_data_get', None)
-        #  app_handle = session.handle_mgr.get_app_handle(-node_address)
-        #  addr_handle = session.handle_mgr.get_address_pub_handle(node_address)
-        #  session.send_message(app_handle, addr_handle, message)
-        #  try:
-            #  composition_data = self.composition_data_get_service(10)
-            #  session.logger.info("{} node is configured initially".format(node_address))
-        #  except TimeoutError as e:
-            #  session.logger.info("{} node is not configured".format(node_address))
-            #  session.logger.error(e)
-            #  raise
-        #  finally:
-            #  session.handle_mgr.put_address_pub_handle(addr_handle)
-            #  session.handle_mgr.put_app_handle(app_handle)
+    def scan_start(self):
+        session = self.provisioner.iaci
+        self.provisioner.scan_start()
+        session.logger.info("Scan start")
 
-    def provision_node(self, uuid, name="Node"):
-        self.provisioner.provision(uuid=uuid, name=name)
+    def scan_stop(self):
+        session = self.provisioner.iaci
+        self.provisioner.scan_stop()
+        session.logger.info("Scan stop")
+
+    def device_list(self):
+        session = self.provisioner.iaci
+        self.provisioner.device_list()
+        session.logger.info("Scan stop")
+
+    def provision_node(self, uuid, key_index=0, name="Node", context_id=0, attention_duration_s=0):
+        session = self.provisioner.iaci
+        net_handle = session.handle_mgr.get_net_handle(key_index)
+        provision_cb = lambda x: x['data']['unicast_address']
+        provision_cond = lambda x: x['meta']['context_id'] == context_id
+        self.provision_service = session.add_service('provision_complete', provision_cb, provision_cond)
+        self.provisioner.provision(uuid, key_index, name, context_id, attention_duration_s)
         node_address = self.provision_service()
-        self.provisioner.iaci.logger.debug("%04x node is provisioned", node_address)
+        session.handle_mgr.put_net_handle(net_handle)
+        session.logger.debug("%04x node is provisioned", node_address)
         return node_address
 
     def run_model(self, session_handle, application, address, message, service=None):

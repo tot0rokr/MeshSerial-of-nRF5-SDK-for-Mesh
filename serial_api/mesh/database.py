@@ -31,6 +31,8 @@ import json
 import datetime
 import re
 
+import threading
+
 from mesh import types as mt
 
 
@@ -67,6 +69,7 @@ class MeshDB(object):
         self.iv_index = 0
         self.iv_update = 0
         self.load()
+        self.__lock = threading.Lock()
 
     @property
     def timestamp(self):
@@ -94,6 +97,7 @@ class MeshDB(object):
             self.iv_update = data["iv_update"]
 
     def store(self, path=None):
+        self.__lock.acquire()
         data = mt.camelify_object(self)
         data["$schema"] = self.__schema
         data["timestamp"] = self.timestamp
@@ -102,6 +106,7 @@ class MeshDB(object):
             path = self.__path
         with open(path, "w") as f:
             json.dump(data, f, indent=2, sort_keys=True)
+        self.__lock.release()
 
     def find_appkey(self, key_index):
         for key in self.app_keys:

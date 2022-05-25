@@ -55,10 +55,17 @@ class LocalMeshSerial(MeshSerialInterface):
             else:
                 raise RuntimeError("%04x node is not found" % node_address)
 
-    def provision_node(self, uuid, name="Node"):
-        addr = self.mesh.provision_node(uuid, name)
+    def provision_node(self, uuid, key_index=0, name="Node", context_id=0, attention_duration_s=0):
+        addr = self.mesh.provision_node(uuid, key_index, name, context_id, attention_duration_s)
         self.nodes.append(addr)
         return addr
+
+    def device_list(self):
+        import time
+        self.mesh.scan_start()
+        time.sleep(10)
+        self.mesh.scan_stop()
+        self.mesh.device_list()
 
     def __get_node(self, addr):
         for node in self.db.nodes:

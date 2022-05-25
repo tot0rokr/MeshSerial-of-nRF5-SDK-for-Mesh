@@ -38,6 +38,8 @@ import aci.aci_cmd as cmd
 from aci.aci_evt import Event
 from mesh import types as mt
 
+import time
+
 
 PRIVATE_BYTES_START = 36
 PRIVATE_BYTES_END = PRIVATE_BYTES_START + 32
@@ -120,12 +122,11 @@ class OOBInputAction(object):
 
 
 class ProvDevice(object):
-    def __init__(self, interactive_device, context_id, auth_data,
+    def __init__(self, interactive_device, auth_data,
                  event_handler, enable_event_filter):
         self.iaci = interactive_device
         self.iaci.acidev.add_packet_recipient(event_handler)
         self.logger = self.iaci.logger
-        self.__context_id = context_id
         self.__private_key = None
         self.__public_key = None
         self.__auth_data = bytearray([0]*16)
@@ -140,7 +141,6 @@ class ProvDevice(object):
                                         Event.PROV_COMPLETE,
                                         Event.PROV_ECDH_REQUEST,
                                         Event.PROV_LINK_CLOSED,
-                                        Event.PROV_LINK_ESTABLISHED,
                                         Event.PROV_OUTPUT_REQUEST,
                                         Event.PROV_FAILED])
         self.set_key_pair()
@@ -162,40 +162,42 @@ class ProvDevice(object):
 
     def default_handler(self, event):
         if event._opcode == Event.PROV_ECDH_REQUEST:
-            self.logger.info("ECDH request received")
+            context_id = event._data['context_id']
+            self.logger.info("ECDH request received: %d", context_id)
             public_key_peer = raw_to_public_key(event._data["peer_public"])
             private_key = raw_to_private_key(event._data["node_private"])
             shared_secret = private_key.exchange(ec.ECDH(), public_key_peer)
-            self.iaci.send(cmd.EcdhSecret(event._data["context_id"],
-                                          shared_secret))
+            self.iaci.send(cmd.EcdhSecret(context_id, shared_secret))
 
         elif event._opcode == Event.PROV_AUTH_REQUEST:
-            self.logger.info("Authentication request")
+            context_id = event._data['context_id']
+            self.logger.info("Authentication request: %d", context_id)
             if event._data["method"] == OOBMethod.NONE:
                 pass
             elif event._data["method"] == OOBMethod.STATIC:
                 self.logger.info("Providing static data")
-                self.iaci.send(cmd.AuthData(self.__context_id,
-                                            self.__auth_data))
+                self.iaci.send(cmd.AuthData(context_id, self.__auth_data))
             else:
                 self.logger.error("Unsupported authetication method {}".format(
                     event._data["method"]))
 
         elif event._opcode == Event.PROV_LINK_ESTABLISHED:
-            self.logger.info("Link established")
+            context_id = event._data['context_id']
+            self.logger.info("Provisioning link established: %d", context_id)
 
         elif event._opcode == Event.PROV_LINK_CLOSED:
-            self.logger.info("Provisioning link closed")
-
-        elif event._opcode == Event.PROV_LINK_ESTABLISHED:
-            self.logger.info("Provisioning link established")
+            context_id = event._data['context_id']
+            self.logger.info("Provisioning link closed: %d", context_id)
 
         elif event._opcode == Event.PROV_OUTPUT_REQUEST:
-            self.logger.error("Unsupported output request")
+            context_id = event._data['context_id']
+            self.logger.error("Unsupported output request: %d", context_id)
+
         elif event._opcode == Event.PROV_FAILED:
-            self.logger.error("Provisioning failed with error {} ({})".format
+            context_id = event._data['context_id']
+            self.logger.error("Provisioning failed: %d with error {} ({})".format
                               (PROV_FAILED_ERRORS[int(event._data["error_code"])],
-                               event._data["error_code"]))
+                               event._data["error_code"]), context_id)
 
         else:
             pass
@@ -203,16 +205,15 @@ class ProvDevice(object):
 
 class Provisioner(ProvDevice):
     def __init__(self, interactive_device, prov_db,
-                 context_id=0,
                  auth_data=[0]*16,
                  enable_event_filter=True):
         super(Provisioner, self).__init__(
-            interactive_device, context_id, auth_data, self.__event_handler,
+            interactive_device, auth_data, self.__event_handler,
             enable_event_filter)
         self.__address = self.iaci.local_unicast_address_start
-        self.unprov_list = []
+        self.unprov_list = dict()
         self.prov_db = None
-        self.__session_data = {}
+        self.__sessions = {}
         self.__next_free_address = None
         self.load(prov_db)
 
@@ -232,11 +233,25 @@ class Provisioner(ProvDevice):
 
         self.iaci.send(cmd.AddrLocalUnicastSet(self.__address, 1))
 
-        #  for key in self.prov_db.net_keys:
-            #  self.iaci.send(cmd.SubnetAdd(key.index,
-                                         #  key.key))
-        #  for key in self.prov_db.app_keys:
-            #  self.iaci.send(cmd.AppkeyAdd(key.index, key.bound_net_key, key.key))
+    class UnprovisionedDevice(object):
+        def __init__(self, uuid, rssi=None, adv_addr_type=None, adv_addr=None, last_receive=None):
+            self.uuid = uuid
+            self.rssi = rssi
+            self.adv_addr_type = adv_addr_type
+            self.adv_addr = adv_addr
+            self.last_receive = last_receive
+
+        def unprovisioned_received(self, rssi, adv_addr_type, adv_addr, last_receive):
+            self.rssi = rssi
+            self.adv_addr_type = adv_addr_type
+            self.adv_addr = adv_addr
+            self.last_receive = last_receive
+
+        def __str__(self):
+            return "UUID {} with RSSI: {} dB, MAC addr({}): {} ".format(self.uuid.hex(),
+                                                                        self.rssi,
+                                                                        self.adv_addr_type,
+                                                                        self.adv_addr)
 
     def scan_start(self):
         """Starts scanning for unprovisioned beacons."""
@@ -257,14 +272,15 @@ class Provisioner(ProvDevice):
                 NetKey index
             name : string
                 Name to give the device (stored in the database)
-            conext-id:
+            context_id:
                 Provisioning context ID to use. Normally no reason to change.
             attention_duration_s : uint8_t
                 Time in seconds during which the device will identify itself using any means it can.
         """
-        if not uuid:
-            uuid = self.unprov_list.pop(0)
-        elif isinstance(uuid, str):
+        if context_id in self.__sessions:
+            raise RuntimeError("Context ID %d is already in progress")
+
+        if isinstance(uuid, str):
             uuid = bytearray.fromhex(uuid)
         elif not isinstance(uuid, bytearray):
             raise TypeError("UUID must be string or bytearray")
@@ -291,12 +307,25 @@ class Provisioner(ProvDevice):
                                      netkey.phase > 0,
                                      attention_duration_s))
 
-        self.__session_data["UUID"] = uuid
-        self.__session_data["name"] = name
-        self.__session_data["net_keys"] = [netkey.index]
-        self.__session_data["unicast_address"] = mt.UnicastAddress(self.__next_free_address)
-        self.__session_data["config_complete"] = False
-        self.__session_data["security"] = netkey.min_security
+        self.__sessions[context_id] = {}
+
+        self.__sessions[context_id]["UUID"] = uuid
+        self.__sessions[context_id]["name"] = name
+        self.__sessions[context_id]["net_keys"] = [netkey.index]
+        self.__sessions[context_id]["unicast_address"] = mt.UnicastAddress(self.__next_free_address)
+        self.__sessions[context_id]["config_complete"] = False
+        self.__sessions[context_id]["security"] = netkey.min_security
+
+        if uuid.hex() in self.unprov_list:
+            del self.unprov_list[uuid.hex()]
+
+    def device_list(self):
+        self.logger.info("Provisioner: Device List")
+        for device in self.unprov_list.values():
+            if device.last_receive < time.time() - 60:
+                del self.unprov_list[device.uuid.hex()]
+                continue
+            self.logger.info("Unprovisioned: %s", str(device))
 
     def __event_handler(self, event):
         if event._opcode == Event.PROV_UNPROVISIONED_RECEIVED:
@@ -304,62 +333,59 @@ class Provisioner(ProvDevice):
             rssi = event._data["rssi"]
             adv_addr_type = event._data["adv_addr_type"]
             adv_addr = event._data["adv_addr"][::-1].hex()
-            if uuid not in self.unprov_list:
-                self.logger.info(
-                    "Received UUID {} with RSSI: {} dB, MAC addr({}): {} ".format(uuid.hex(), rssi, adv_addr_type, adv_addr))
-                self.unprov_list.append(uuid)
+            if uuid.hex() not in self.unprov_list:
+                device = self.UnprovisionedDevice(uuid, rssi, adv_addr_type, adv_addr, time.time())
+                self.unprov_list[uuid.hex()] = device
+            else:
+                device = self.unprov_list[uuid.hex()]
+                device.unprovisioned_received(rssi, adv_addr_type, adv_addr, time.time())
 
         elif event._opcode == Event.PROV_CAPS_RECEIVED:
+            context_id = event._data['context_id']
             element_count = event._data["num_elements"]
-            self.logger.info("Received capabilities")
+            self.logger.info("Received capabilities: %d", context_id)
             self.logger.info("Number of elements: {}".format(element_count))
 
-            self.iaci.send(cmd.OobUse(event._data["context_id"], OOBMethod.NONE, 0, 0))
-            self.__session_data["elements"] = [mt.Element(i) for i in range(element_count)]
+            self.iaci.send(cmd.OobUse(context_id, OOBMethod.NONE, 0, 0))
+            self.__sessions[context_id]["elements"] = [mt.Element(i) for i in range(element_count)]
 
         elif event._opcode == Event.PROV_COMPLETE:
-            num_elements = len(self.__session_data["elements"])
+            context_id = event._data['context_id']
+            num_elements = len(self.__sessions[context_id]["elements"])
             address_range = "{}-{}".format(hex(event._data["address"]),
                                            hex(event._data["address"]
                                                + num_elements - 1))
 
-            self.logger.info("Provisioning complete")
+            self.logger.info("Provisioning complete: %d", context_id)
             self.logger.info("\tAddress(es): " + address_range)
             self.logger.info("\tDevice key: {}".format(event._data["device_key"].hex()))
             self.logger.info("\tNetwork key: {}".format(event._data["net_key"].hex()))
-            #  self.logger.info("Adding device key to subnet %d", event._data["net_key_index"])
-            # Devkey added to subnet 0.
-            #  self.iaci.send(cmd.DevkeyAdd(event._data["address"], 0,
-                                         #  event._data["device_key"]))
 
-            #  self.logger.info("Adding publication address of root element")
-            #  self.iaci.send(cmd.AddrPublicationAdd(event._data["address"]))
-
-            self.__session_data["device_key"] = event._data["device_key"]
-            self.store(self.__session_data)
+            self.__sessions[context_id]["device_key"] = event._data["device_key"]
+            self.store(context_id)
 
             # Update address to the next in range
             self.__next_free_address += num_elements
 
             if hasattr(self.iaci, 'put_event'):
                 self.iaci.put_event({'opcode':'provision_complete',
-                                     'meta': {},
+                                     'meta': {'context_id': context_id},
                                      'data': {'unicast_address': event._data["address"]}})
 
         else:
             self.default_handler(event)
 
-    def store(self, data):
-        self.prov_db.nodes.append(mt.Node(**self.__session_data))
+    def store(self, context_id):
+        self.prov_db.nodes.append(mt.Node(**self.__sessions[context_id]))
         self.prov_db.store()
-        self.__session_data = {}
+        del self.__sessions[context_id]
 
 
 class Provisionee(ProvDevice):
-    def __init__(self, interactive_device, context_id=0,
+    def __init__(self, interactive_device,
                  auth_data=bytearray([0]*16), enable_event_filter=True):
         super(Provisionee, self).__init__(
-            interactive_device, context_id, auth_data, self.__event_handler,
+            interactive_device, auth_data, self.__event_handler,
             enable_event_filter)
         self.__num_elements = interactive_device.CONFIG.ACCESS_ELEMENT_COUNT
         self.iaci.send(cmd.CapabilitiesSet(self.__num_elements,

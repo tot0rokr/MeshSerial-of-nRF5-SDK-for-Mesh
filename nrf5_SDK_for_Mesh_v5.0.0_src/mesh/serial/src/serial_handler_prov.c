@@ -53,7 +53,7 @@
 #include "serial_handler_prov.h"
 
 #ifndef CONFIG_NUM_PROV_CONTEXTS
-#define CONFIG_NUM_PROV_CONTEXTS 2
+#define CONFIG_NUM_PROV_CONTEXTS 5
 #endif
 
 static bool                       m_scanning_running;

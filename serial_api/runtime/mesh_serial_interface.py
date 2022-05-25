@@ -24,7 +24,7 @@ class MeshSerialInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def provision_node(self, session_index, uuid, name="Node"):
+    def provision_node(self, uuid, key_index=0, name="Node", context_id=0, attention_duration_s=0):
         pass
 
     @abstractmethod
