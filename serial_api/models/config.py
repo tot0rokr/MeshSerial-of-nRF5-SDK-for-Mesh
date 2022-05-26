@@ -471,6 +471,7 @@ class ConfigurationClient(Model):
         self.db_save()
         self.logger.info("Received composition data (page 0x%02x): %s",
                          page, json.dumps(data, indent=2))
+        self.logger.info("unicast_address: %04x", message.meta['src'])
 
     def __heartbeat_publication_status_handler(self, opcode, message):
         status, dst, count_log, period_log, ttl, features, netkey_index = struct.unpack(

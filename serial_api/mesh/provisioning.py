@@ -356,7 +356,7 @@ class Provisioner(ProvDevice):
                                            hex(event._data["address"]
                                                + num_elements - 1))
 
-            self.logger.info("Provisioning complete: %d", context_id)
+            self.logger.info("Provisioning complete node %04x: context %d", event._data["address"], context_id)
             self.logger.info("\tAddress(es): " + address_range)
             self.logger.info("\tDevice key: {}".format(event._data["device_key"].hex()))
             self.logger.info("\tNetwork key: {}".format(event._data["net_key"].hex()))
