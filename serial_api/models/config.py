@@ -490,6 +490,7 @@ class ConfigurationClient(Model):
             self.logger.info("Heartbeat publication state: " +
                              "dst: %04x, count: %d, period: %ds, features: %r, subnet: %d",
                              dst, count, period, features, netkey_index)
+            return {'dst':dst, 'count':count, 'period':period, 'features':features, 'netkey_index':netkey_index}
 
     def __appkey_status_handler(self, opcode, message):
         status = AccessStatus(message.data[0])
@@ -636,6 +637,7 @@ class ConfigurationClient(Model):
             self.logger.info("Heartbeat subscription state: " +
                              "src: %04x, dst: %04x, period: %ds, count: %d, min/max: %d/%d",
                              src, dst, period, count_log, min_hops, max_hops)
+            return {'src':src, 'dst':dst, 'period':period, 'count_log':count_log, 'min':min_hops, 'max':max_hops}
 
     def __model_app_status_handler(self, opcode, message):
         status, element_address, appkey_index = struct.unpack(
