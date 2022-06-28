@@ -81,8 +81,6 @@ class HandleMgr(object):
             self.send(aci_cmd.SubnetDelete(handle))
             return self.__net_delete_handler()
         ret = self.nethandle_allocator.reset_handle(handle, __put_handle)
-        #  if ret != handle:
-            #  raise RuntimeError("put_net_handle: handle: {}, ret: {}".format(handle, ret))
 
     def get_app_handle(self, application):
         if application < 0: # device handle
@@ -106,8 +104,6 @@ class HandleMgr(object):
                 self.send(aci_cmd.AppkeyDelete(handle))
                 return self.__app_delete_handler()
             ret = self.apphandle_allocator.reset_handle(handle, __put_handle)
-            #  if ret != handle:
-                #  raise RuntimeError("put_app_handle: handle: {}, ret: {}".format(handle, ret))
 
     def get_device_handle(self, node_address):
         def __get_handle(addr):
@@ -124,8 +120,6 @@ class HandleMgr(object):
             return self.__dev_delete_handler()
 
         ret = self.devhandle_allocator.reset_handle(handle, __put_handle)
-        #  if ret != handle:
-            #  raise RuntimeError("put_device_handle: handle: {}, ret: {}".format(handle, ret))
 
     def get_address_pub_handle(self, address):
         def __get_handle(addr):
@@ -140,5 +134,3 @@ class HandleMgr(object):
             return self.__addr_pub_remove_handler()
 
         ret = self.addrhandle_allocator.reset_handle(handle, __put_handle)
-        #  if ret != handle:
-            #  raise RuntimeError("put_device_handle: handle: {}, ret: {}".format(handle, ret))

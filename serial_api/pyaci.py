@@ -28,9 +28,6 @@ USAGE_STRING += colorama.Style.RESET_ALL
 
 def start_ipython(options):
     colorama.init()
-    #  comports = options.devices
-    #  device_handles = list()
-    #  session_handles = list()
 
     # Print out a mini intro to the interactive session --
     # Start with white and then magenta to keep the session white
@@ -110,15 +107,6 @@ if __name__ == '__main__':
                         default='5070',
                         help="Set API server port number")
     options = parser.parse_args()
-
-    #  if options.log_level == 1:
-        #  options.log_level = logging.ERROR
-    #  elif options.log_level == 2:
-        #  options.log_level = logging.WARNING
-    #  elif options.log_level == 3:
-        #  options.log_level = logging.INFO
-    #  else:
-        #  options.log_level = logging.DEBUG
 
     options.address = (options.ip, options.port)
 

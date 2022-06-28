@@ -16,7 +16,7 @@ class SessionMgr(object):
                                   self.device_mgr.device(device_handle).port)
         device = self.device_mgr.hold_device(device_handle)
         if device is None:
-            raise Exception("Target device (handle #{}) can't be used.".format(device_handle))
+            raise RuntimeError("Target device (handle #{}) can't be used.".format(device_handle))
         self.__sessions[self.__next_session_handle] = {'session': MeshSerialSession(
                                                                         self.device_mgr.device(device_handle),
                                                                         logger,

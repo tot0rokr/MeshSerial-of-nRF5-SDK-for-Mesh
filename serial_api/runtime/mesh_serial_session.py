@@ -23,8 +23,11 @@ class ServiceHandler(object):
         self.destructor = destructor #RFU
 
     def __del__(self):
-        if self.destructor is not None:
+        if callable(self.destructor):
             self.destructor(self)
+        else:
+            if self.destructor is not None:
+                raise TypeError("ServiceHandler: 'destructor' is not callable")
 
     def __call__(self, timeout=None, *args):
         self.event.wait(timeout)
@@ -34,10 +37,12 @@ class ServiceHandler(object):
         self.event.clear()
         if callable(self.func):
             return self.func(data, *args)
+        else:
+            if self.func is not None:
+                raise TypeError("ServiceHandler: 'func' is not callable")
         return None
 
     def filter(self, *args):
-        #  print(*args)
         return self.cond(*args) and self.data is None
 
     def put(self, data):
@@ -91,12 +96,6 @@ class MeshSerialSession(threading.Thread):
 
         self.handle_mgr = HandleMgr(self, prov_db)
 
-        #  self.map_packet_send_rsp = [None for _ in range(1000)]
-        #  self.map_tx_completed    = [None for _ in range(1000)]
-        #  packet_send_cb      = lambda x: (self.map_packet_send_rsp[x['data']['serial_tid'] % 1000] = x['data']['token'])
-        #  packet_send_service = self.add_service(0xAB, packet_send_cb, None)
-        #  tx_complete_cb      = lambda x: (self.map_tx_completed[x['data']['token'] % 1000] = x['data']['token'])
-        #  tx_complete_service = self.add_service('tx_complete', tx_complete_cb, None)
         self.map_packet_send_rsp = [None for _ in range(1000)]
         self.map_tx_completed    = [None for _ in range(1000)]
         def packet_send_cb(x):
@@ -124,7 +123,7 @@ class MeshSerialSession(threading.Thread):
     def send_message(self, app_handle, addr_handle, message):
         model = self.get_model(message.model_name)
         if model is None:
-            raise Exception("%s is not found" % message.model_name)
+            raise RuntimeError("%s is not found" % message.model_name)
         op = getattr(model, message.op)
 
         model.publish_set(app_handle, addr_handle)
@@ -136,7 +135,7 @@ class MeshSerialSession(threading.Thread):
         elif isinstance(message.args, (list, tuple, set)):
             serial_tid = op(*message.args)
         else:
-            raise Exception("send_message: Invalid Arguments of {}.{}".format(
+            raise RuntimeError("send_message: Invalid Arguments of {}.{}".format(
                             message.model_name, message.op))
 
         self.packet_send_service(6)
@@ -215,11 +214,14 @@ class MeshSerialSession(threading.Thread):
         self.service_handlers[opcode].append(service_handler)
         return service_handler
 
+    # TODO: Not yet using. May make memory leak if this does not use.
     def remove_service(self, opcode, service_handler):
         try:
             self.service_handlers[opcode].remove(service_handler)
         except ValueError:
             self.aci.logger.error("remove_service: Service {}({}) is not registered.".format(opcode, service_handler))
+        if len(self.service_handlers[opcode]) == 0:
+            del self.service_handlers[opcode]
 
     def run(self):
         while True:
@@ -250,7 +252,6 @@ class MeshSerialSession(threading.Thread):
             except IndexError:
                 break
 
-            # Command response must be received by one request.
             if not rsp._opcode in self.service_handlers:
                 self.logger.debug("receive_command_responses: Unknown response for %s is received",
                                  rsp._command_name)
@@ -296,5 +297,3 @@ class MeshSerialSession(threading.Thread):
             self.put_event({'opcode':'tx_complete',
                             'meta': {},
                             'data': {'token':event._data['token']}})
-        #  else:
-            #  self.logger.debug("event_handler: " + str(event))

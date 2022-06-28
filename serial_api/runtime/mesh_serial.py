@@ -56,9 +56,6 @@ class MeshSerial(object):
 
         self.net_handle = session.handle_mgr.get_net_handle(0)  # Default NetKey 0
 
-        #  completed_provision_cb = lambda x: x['data']['unicast_address']
-        #  self.provision_service = session.add_service('provision_complete', completed_provision_cb, None)
-
         session.logger.info("{} session is provisioner".format(session_handle))
 
     def scan_start(self):

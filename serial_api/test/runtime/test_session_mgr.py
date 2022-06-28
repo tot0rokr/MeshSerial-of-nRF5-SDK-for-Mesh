@@ -11,7 +11,7 @@ class TestSessionMgr(unittest.TestCase):
         self.device_handle = self.device_mgr.create_device(device=DumpDevice())
 
     def test_session(self):
-        self.assertRaises(Exception, self.mgr.create_session, device_handle=999)
+        self.assertRaises(RuntimeError, self.mgr.create_session, device_handle=999)
         session_handle = self.mgr.create_session(device_handle=self.device_handle, prov_db=None)
         session = self.mgr.session(999)
         self.assertIsNone(session)
@@ -28,7 +28,7 @@ class TestSessionMgr(unittest.TestCase):
         self.assertEqual(session.acidev.write_aci_cmd(test_packet), b'\x04\x13\x12\x11\x00')
 
         # Create session of in-used device_handle
-        self.assertRaises(Exception, self.mgr.create_session, device_handle=self.device_handle, prov_db=None)
+        self.assertRaises(RuntimeError, self.mgr.create_session, device_handle=self.device_handle, prov_db=None)
 
     def test_remove_session(self):
         session_handle = self.mgr.create_session(device_handle=self.device_handle, prov_db=None)
