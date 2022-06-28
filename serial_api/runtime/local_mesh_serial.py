@@ -6,11 +6,6 @@ import mesh.types as mt
 import os
 import sys
 
-#  STATUS_UNKNOWN = 0x00
-#  STATUS_PROVISIONED = 0x01
-#  STATUS_COMPOSED = 0x02
-#  STATUS_CONFIG_COMPLETE = 0x03
-
 class LocalMeshSerial(MeshSerialInterface):
     def __init__(self, options, db, logger=None):
         CONFIG = ApplicationConfig(

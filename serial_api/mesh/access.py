@@ -236,16 +236,6 @@ class Access(object):
 
 import threading
 class SerialTid(object):
-    #  __instance = None
-
-    #  def __new__(cls, *args, **kwargs):
-        #  if not isinstance(cls.__instance, cls):
-            #  cls.__instance = super().__new__(cls, *args, **kwargs)
-            #  cls.__instance.__lock = threading.RLock()
-            #  cls.__instance.INITIAL_TOKEN = 0x00000000
-            #  cls.__instance.BORDER_TOKEN  = 0xFFFFFFFE
-        #  return cls.__instance
-
     def __init__(self):
         self.__lock = threading.RLock()
         self.INITIAL_TOKEN = 0x00000000

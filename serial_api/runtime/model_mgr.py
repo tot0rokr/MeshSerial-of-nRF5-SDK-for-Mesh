@@ -21,7 +21,7 @@ class ModelMgr(object):
 
     def create_model(self, model):
         if not isinstance(model, Model):
-            raise Exception("model is not Model")
+            raise RuntimeError("model is not Model")
         self.__models[self.__next_model_handle] = model
         self.__next_model_handle += 1
 

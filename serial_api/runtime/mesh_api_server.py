@@ -25,7 +25,6 @@ class MeshAPIServer(object):
         self.worker.daemon = True
         self.is_running = threading.Event()
         self.__is_terminated = False
-        #  self.pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
         # Set Provisioner API and Add ConfigurationClient API
         if self.provisioner_on:
