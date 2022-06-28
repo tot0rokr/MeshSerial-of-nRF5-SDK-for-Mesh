@@ -19,8 +19,8 @@ class Command(object):
 
 # TODO: Need to change
 class Service(object):
-    def __init__(self, opcode, cb=None, cond=None, timeout=10, args=(),
-                       retransmit_count=0, retransmit_interval=3):
+    def __init__(self, opcode, cb=None, args=(), cond=None, timeout=5,
+                       retransmit_count=3, retransmit_interval=1):
         self.opcode = opcode
         self.cb = cb
         self.cond = cond
