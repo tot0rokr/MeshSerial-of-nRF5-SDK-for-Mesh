@@ -60,96 +60,26 @@ class LocalMeshSerial(MeshSerialInterface):
         self.nodes.append(addr)
         return addr
 
-    def device_list(self):
+    def device_list(self, duration):
         import time
         self.mesh.scan_start()
-        time.sleep(10)
+        time.sleep(duration)
         self.mesh.scan_stop()
         self.mesh.device_list()
 
-    def __get_node(self, addr):
+    def get_node(self, addr):
         for node in self.db.nodes:
             if node.unicast_address == addr:
                 return node
         return None
 
-    def __get_node_address(self, element_address):
+    def get_node_address(self, element_address):
         for node in self.db.nodes:
             beg = node.unicast_address
             end = beg + len(node.elements)
             if beg <= element_address < end:
                 return beg
         return None
-
-    def appkey_add(self, address, application):
-        command = {'model_name':'ConfigurationClient',
-                   'op':'appkey_add',
-                   'args':(application,)}
-        service = {'opcode':'8003', 'cond':lambda x: x['meta']['src'] == address, 'timeout':5,
-                   'retransmit_count':3, 'retransmit_interval':1}
-        try:
-            self.run_model(self.mesh_manager_handle,
-                           -address,
-                           address,
-                           command,
-                           service)
-        except TimeoutError:
-            return False
-        return True
-
-    def model_app_bind(self, element_address, application, model_id):
-        address = self.__get_node_address(element_address)
-        command = {'model_name':'ConfigurationClient',
-                   'op':'model_app_bind',
-                   'args':(element_address, application, mt.ModelId(model_id))}
-        service = {'opcode':'803e', 'cond':lambda x: x['meta']['src'] == address, 'timeout':5,
-                   'retransmit_count':3, 'retransmit_interval':1}
-        if address is None:
-            return False
-        try:
-            self.run_model(self.mesh_manager_handle,
-                           -address,
-                           address,
-                           command,
-                           service)
-        except TimeoutError:
-            return False
-        return True
-
-    def compose_node(self, address):
-        #  if target[1] != STATUS_PROVISIONED:
-        if self.__get_node(address) is None:
-            return False
-        command = {'model_name':'ConfigurationClient',
-                   'op':'composition_data_get'}
-        service = {'opcode':'02', 'cond':lambda x: x['meta']['src'] == address, 'timeout':5,
-                   'retransmit_count':3, 'retransmit_interval':1}
-        try:
-            composition_data = self.run_model(self.mesh_manager_handle,
-                                              -address,
-                                              address,
-                                              command,
-                                              service)
-        except TimeoutError:
-            return False
-        #  target[1] = STATUS_COMPOSED
-        return True
-
-
-    def node_reset(self, address):
-        command = {'model_name':'ConfigurationClient',
-                   'op':'node_reset'}
-        service = {'opcode':'804a', 'cond':lambda x: x['meta']['src'] == address, 'timeout':5,
-                   'retransmit_count':3, 'retransmit_interval':1}
-        try:
-            self.run_model(self.mesh_manager_handle,
-                           -address,
-                           address,
-                           command,
-                           service)
-        except TimeoutError:
-            return False
-        return True
 
     #  def __model_get(self, element_address, model_id):
         #  for node in self.prov_db.nodes:
@@ -170,7 +100,7 @@ class LocalMeshSerial(MeshSerialInterface):
             _service = None
 
         return self.mesh.run_model(session_handle,
-                            application,
-                            address,
-                            message,
-                            _service)
+                                   application,
+                                   address,
+                                   message,
+                                   _service)

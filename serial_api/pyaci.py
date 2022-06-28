@@ -14,15 +14,7 @@ import colorama
 from argparse import ArgumentParser
 import traitlets.config
 
-from aci.aci_uart import Uart
-#  from aci.aci_utils import STATUS_CODE_LUT
-from aci.aci_config import ApplicationConfig
-
-#  from mesh import access
-from mesh import types as mt                            # NOQA: ignore unused import
-from mesh.database import MeshDB                        # NOQA: ignore unused import
-#  from runtime.mesh_serial import MeshSerial
-from runtime.local_mesh_serial import LocalMeshSerial
+from runtime.mesh_api_server import MeshAPIServer
 
 USAGE_STRING = \
     """
@@ -49,26 +41,9 @@ def start_ipython(options):
 
     print(USAGE_STRING.format(**colors))
 
-    #  CONFIG = ApplicationConfig(
-        #  header_path=os.path.join(os.path.dirname(sys.argv[0]),
-                                 #  ("../nrf5_SDK_for_Mesh_v5.0.0_src/examples/serial/include/"
-                                  #  + "nrf_mesh_config_app.h")))
-
-    #  mesh = MeshSerial(options, CONFIG)
-
-    #  for dev_com in comports:
-        #  device_handles.append(mesh.create_device(Uart(port=dev_com,
-                                         #  baudrate=options.baudrate,
-                                         #  device_name=dev_com.split("/")[-1])))
-
-    db = MeshDB("database/test_database.json")
-    mesh = LocalMeshSerial(options, db)
-    #  session_handles.append(mesh.create_session(device_handles[0], db))
-    mesh_manager_handle = mesh.connect_session(0)
-    #  mesh.initialize_provisioner(session_handles[0], db)
-    mesh.set_provisioner(mesh_manager_handle)
-    #  mesh.start_session(session_handles[0])
-    mesh.start_session(mesh_manager_handle)
+    mesh_api_server = MeshAPIServer(options=options,
+                       db_name="database/test_database.json",
+                       provisioner_on=True)
 
     # Set iPython configuration
     ipython_config = traitlets.config.get_config()
@@ -90,13 +65,6 @@ def start_ipython(options):
     ipython_config.InteractiveShellApp.log_level = logging.DEBUG
 
     IPython.embed(config=ipython_config)
-    # TODO: session delete
-    #  for dev in device_handles:
-        #  mesh.device_mgr.remove_device(dev)
-
-    #  for ses in session_handles:
-        #  mesh.session_mgr.remove_session(ses)
-    del mesh
 
     raise SystemExit(0)
 
@@ -130,6 +98,17 @@ if __name__ == '__main__':
                         default=3,
                         help=("Set default logging level: "
                               + "1=Errors only, 2=Warnings, 3=Info, 4=Debug"))
+    parser.add_argument("-i", "--ip",
+                        dest="ip",
+                        required=False,
+                        default='localhost',
+                        help="Set API server address")
+    parser.add_argument("-p", "--port",
+                        dest="port",
+                        type=int,
+                        required=False,
+                        default='5070',
+                        help="Set API server port number")
     options = parser.parse_args()
 
     #  if options.log_level == 1:
@@ -140,5 +119,7 @@ if __name__ == '__main__':
         #  options.log_level = logging.INFO
     #  else:
         #  options.log_level = logging.DEBUG
+
+    options.address = (options.ip, options.port)
 
     start_ipython(options)

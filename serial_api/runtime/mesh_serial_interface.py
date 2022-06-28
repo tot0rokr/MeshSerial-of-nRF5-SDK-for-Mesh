@@ -16,19 +16,19 @@ class MeshSerialInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def set_provisioner(self, session_index):
+    def connect_session(self, device_index):
         pass
 
     @abstractmethod
-    def start_session(self, session_index):
+    def set_provisioner(self, session_handle):
+        pass
+
+    @abstractmethod
+    def start_session(self, session_handle):
         pass
 
     @abstractmethod
     def provision_node(self, uuid, key_index=0, name="Node", context_id=0, attention_duration_s=0):
-        pass
-
-    @abstractmethod
-    def compose_node(self, node_key):
         pass
 
     @abstractmethod
