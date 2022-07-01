@@ -82,7 +82,11 @@ class MeshSerial(object):
         self.provisioner.provision(uuid, key_index, name, context_id, attention_duration_s)
         node_address = self.provision_service()
         session.handle_mgr.put_net_handle(net_handle)
-        session.logger.debug("%04x node is provisioned", node_address)
+        if node_address != 0:
+            session.logger.debug("%s node is provisioned - %04x", uuid, node_address)
+        else:
+            session.logger.debug("%s node is not provisioned", uuid)
+
         return node_address
 
     def run_model(self, session_handle, application, address, message, service=None):

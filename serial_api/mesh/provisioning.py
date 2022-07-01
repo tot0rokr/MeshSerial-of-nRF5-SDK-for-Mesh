@@ -367,10 +367,19 @@ class Provisioner(ProvDevice):
             # Update address to the next in range
             self.__next_free_address += num_elements
 
+            self.__sessions[context_id]["ret"] = event._data["address"]
+
+        elif event._opcode == Event.PROV_LINK_CLOSED:
+            context_id = event._data['context_id']
             if hasattr(self.iaci, 'put_event'):
+                if 'ret' not in self.__sessions[context_id]:
+                    self.__sessions[context_id]["ret"] = 0
                 self.iaci.put_event({'opcode':'provision_complete',
                                      'meta': {'context_id': context_id},
-                                     'data': {'unicast_address': event._data["address"]}})
+                                     'data': {'unicast_address': self.__sessions[context_id]["ret"]}})
+
+            self.logger.info("Provisioning link closed: %d", context_id)
+            del self.__sessions[context_id]
 
         else:
             self.default_handler(event)
@@ -378,8 +387,6 @@ class Provisioner(ProvDevice):
     def store(self, context_id):
         self.prov_db.nodes.append(mt.Node(**self.__sessions[context_id]))
         self.prov_db.store()
-        del self.__sessions[context_id]
-
 
 class Provisionee(ProvDevice):
     def __init__(self, interactive_device,
