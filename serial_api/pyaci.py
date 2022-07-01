@@ -66,7 +66,7 @@ def start_ipython(options):
     raise SystemExit(0)
 
 
-if __name__ == '__main__':
+def pyaci():
     parser = ArgumentParser(
         description="nRF5 SDK for Mesh Interactive PyACI")
     parser.add_argument("-d", "--device",
@@ -111,3 +111,6 @@ if __name__ == '__main__':
     options.address = (options.ip, options.port)
 
     start_ipython(options)
+
+if __name__ == '__main__':
+    pyaci()
