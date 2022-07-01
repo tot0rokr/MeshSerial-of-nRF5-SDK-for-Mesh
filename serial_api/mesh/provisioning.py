@@ -204,6 +204,8 @@ class ProvDevice(object):
 
 
 class Provisioner(ProvDevice):
+    NUM_PROV_CONTEXTS = 5    # nrf5_SDK_for_Mesh_v5.0.0_src/mesh/serial/src/serial_handler_prov.c
+
     def __init__(self, interactive_device, prov_db,
                  auth_data=[0]*16,
                  enable_event_filter=True):
@@ -279,6 +281,9 @@ class Provisioner(ProvDevice):
         """
         if context_id in self.__sessions:
             raise RuntimeError("Context ID %d is already in progress")
+
+        if context_id >= Provisioner.NUM_PROV_CONTEXTS:
+            raise RuntimeError("Context ID %d must be under %d" % Provisioner.NUM_PROV_CONTEXTS)
 
         if isinstance(uuid, str):
             uuid = bytearray.fromhex(uuid)
