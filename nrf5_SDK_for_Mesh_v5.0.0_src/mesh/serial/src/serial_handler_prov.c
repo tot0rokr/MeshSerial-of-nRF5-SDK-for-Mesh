@@ -303,6 +303,20 @@ void serial_handler_prov_pkt_in(const serial_packet_t * p_incoming)
                 serial_cmd_rsp_send(p_incoming->opcode, SERIAL_STATUS_SUCCESS, NULL, 0);
             }
             break;
+        case SERIAL_OPCODE_CMD_PROV_ALLOC_ADDR:
+        {
+            uint8_t context_id = p_incoming->payload.cmd.prov.alloc_addr.context_id;
+            if (context_id < CONFIG_NUM_PROV_CONTEXTS)
+            {
+                memcpy((uint8_t *) &m_prov_contexts[context_id].data.address, (uint8_t *) &p_incoming->payload.cmd.prov.alloc_addr.address, sizeof(uint16_t));
+                serial_cmd_rsp_send(p_incoming->opcode, SERIAL_STATUS_SUCCESS, NULL, 0);
+            }
+            else
+            {
+                serial_cmd_rsp_send(p_incoming->opcode, SERIAL_STATUS_ERROR_INVALID_STATE, NULL, 0);
+            }
+            break;
+        }
         case SERIAL_OPCODE_CMD_PROV_PROVISION:
         {
             uint32_t status;
@@ -312,7 +326,6 @@ void serial_handler_prov_pkt_in(const serial_packet_t * p_incoming)
                 memcpy(prov_data.netkey, p_incoming->payload.cmd.prov.data.network_key, NRF_MESH_KEY_SIZE);
                 memcpy((uint8_t *) &prov_data.netkey_index, (uint8_t *) &p_incoming->payload.cmd.prov.data.network_key_index, sizeof(uint16_t));
                 memcpy((uint8_t *) &prov_data.iv_index, (uint8_t *) &p_incoming->payload.cmd.prov.data.iv_index, sizeof(uint32_t));
-                memcpy((uint8_t *) &prov_data.address, (uint8_t *) &p_incoming->payload.cmd.prov.data.address, sizeof(uint16_t));
                 prov_data.flags.iv_update = p_incoming->payload.cmd.prov.data.iv_update_flag & 0x01;
                 prov_data.flags.key_refresh = p_incoming->payload.cmd.prov.data.key_refresh_flag & 0x01;
 

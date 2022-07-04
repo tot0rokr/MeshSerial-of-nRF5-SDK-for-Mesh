@@ -39,6 +39,7 @@ from aci.aci_evt import Event
 from mesh import types as mt
 
 import time
+import threading
 
 
 PRIVATE_BYTES_START = 36
@@ -217,6 +218,7 @@ class Provisioner(ProvDevice):
         self.prov_db = None
         self.__sessions = {}
         self.__next_free_address = None
+        self.__alloc_address_lock = threading.Semaphore(1)
         self.load(prov_db)
 
     def load(self, prov_db):
@@ -307,7 +309,6 @@ class Provisioner(ProvDevice):
                                      netkey.key,
                                      netkey.index,
                                      self.prov_db.iv_index,
-                                     self.__next_free_address,
                                      self.prov_db.iv_update,
                                      netkey.phase > 0,
                                      attention_duration_s))
@@ -317,7 +318,6 @@ class Provisioner(ProvDevice):
         self.__sessions[context_id]["UUID"] = uuid
         self.__sessions[context_id]["name"] = name
         self.__sessions[context_id]["net_keys"] = [netkey.index]
-        self.__sessions[context_id]["unicast_address"] = mt.UnicastAddress(self.__next_free_address)
         self.__sessions[context_id]["config_complete"] = False
         self.__sessions[context_id]["security"] = netkey.min_security
 
@@ -351,6 +351,13 @@ class Provisioner(ProvDevice):
             self.logger.info("Received capabilities: %d", context_id)
             self.logger.info("Number of elements: {}".format(element_count))
 
+            with self.__alloc_address_lock:
+                alloc_addr = self.__next_free_address
+                self.__next_free_address += element_count
+
+            self.iaci.send(cmd.AllocAddr(context_id, alloc_addr))
+            self.__sessions[context_id]["unicast_address"] = mt.UnicastAddress(alloc_addr)
+
             self.iaci.send(cmd.OobUse(context_id, OOBMethod.NONE, 0, 0))
             self.__sessions[context_id]["elements"] = [mt.Element(i) for i in range(element_count)]
 
@@ -368,9 +375,6 @@ class Provisioner(ProvDevice):
 
             self.__sessions[context_id]["device_key"] = event._data["device_key"]
             self.store(context_id)
-
-            # Update address to the next in range
-            self.__next_free_address += num_elements
 
             self.__sessions[context_id]["ret"] = event._data["address"]
 
