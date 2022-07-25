@@ -14,6 +14,7 @@ def appkey_add(self, address, application):
     return True
 
 def model_app_bind(self, element_address, application, model_id):
+    import mesh.types as mt
     address = self.mesh.get_node_address(element_address)
     command = {'model_name':'ConfigurationClient',
                'op':'model_app_bind',
