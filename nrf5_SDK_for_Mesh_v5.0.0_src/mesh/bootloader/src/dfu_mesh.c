@@ -67,7 +67,7 @@
 #define TX_INTERVAL_TYPE_READY          (BL_RADIO_INTERVAL_TYPE_REGULAR)
 #define TX_INTERVAL_TYPE_DATA           (BL_RADIO_INTERVAL_TYPE_EXPONENTIAL)
 #define TX_INTERVAL_TYPE_RSP            (BL_RADIO_INTERVAL_TYPE_EXPONENTIAL)
-#define TX_INTERVAL_TYPE_REQ            (BL_RADIO_INTERVAL_TYPE_REGULAR_SLOW)
+#define TX_INTERVAL_TYPE_REQ            (BL_RADIO_INTERVAL_TYPE_REGULAR_DFU_REQ)
 
 #define STATE_TIMEOUT_RAMPDOWN          (30000000)
 
@@ -79,7 +79,7 @@
 #define REQ_CACHE_SIZE                  (4)
 #define REQ_RX_COUNT_RETRY              (8)
 
-#define REQ_SEGMENT_SIZE                (3)
+#define REQ_SEGMENT_SIZE                (3) /* Must be lower (tx_slot size - 1) */
 #define DATA_REQ_SEGMENT_NONE           (0)
 
 #define LOST_START_EDGE                 (10)
@@ -283,10 +283,10 @@ static uint32_t packet_tx_dynamic(dfu_packet_t* p_packet,
     bl_radio_interval_type_t interval_type,
     uint8_t repeats)
 {
-    static uint8_t tx_slot = 1;
+    static uint8_t tx_slot = REQ_SEGMENT_SIZE;
     if (tx_slot >= m_tx_slots || tx_slot == 0)
     {
-        tx_slot = 1;
+        tx_slot = REQ_SEGMENT_SIZE;
     }
     bl_evt_t tx_evt;
     tx_evt.type = BL_EVT_TYPE_TX_RADIO;
@@ -681,11 +681,48 @@ static uint32_t notify_state_packet(dfu_packet_t* p_packet)
     return bootloader_evt_send(&fw_evt);
 }
 
+static uint32_t request_data(uint16_t segment, uint32_t req_slot)
+{
+    dfu_packet_t req_packet;
+    req_packet.packet_type = DFU_PACKET_TYPE_DATA_REQ;
+    req_packet.payload.req_data.segment = segment;
+    req_packet.payload.req_data.transaction_id = m_transaction.transaction_id;
+
+    /* Use beacon slot */
+    bl_evt_t tx_evt;
+    tx_evt.type = BL_EVT_TYPE_TX_RADIO;
+    tx_evt.params.tx.radio.p_dfu_packet = &req_packet;
+    tx_evt.params.tx.radio.length = DFU_PACKET_LEN_DATA_REQ;
+    tx_evt.params.tx.radio.interval_type = TX_INTERVAL_TYPE_REQ;
+    tx_evt.params.tx.radio.tx_count = TX_REPEATS_REQ;
+    tx_evt.params.tx.radio.tx_slot = (uint8_t)req_slot;
+    uint32_t status = bootloader_evt_send(&tx_evt);
+    if (status == NRF_SUCCESS)
+    {
+        __LOG("TX REQ FOR %d\n", segment);
+    }
+    return status;
+}
+
+static void re_request_data(void)
+{
+    uint32_t oldest_segment = 0;
+    for (uint32_t i = 1; i < REQ_SEGMENT_SIZE; i++)
+    {
+        if (m_data_req_segments[i] < m_data_req_segments[oldest_segment])
+        {
+            oldest_segment = i;
+        }
+    }
+    request_data(m_data_req_segments[oldest_segment], oldest_segment);
+}
+
 /* check whether we've lost any entries, and request them */
-static void request_missing_data(uint16_t prev_segment, uint16_t *m_data_req_segment)
+static bool request_missing_data(uint16_t prev_segment, uint32_t req_slot)
 {
     uint32_t* p_req_entry = NULL;
     uint32_t req_entry_len = 0;
+    uint16_t *m_data_req_segment = &m_data_req_segments[req_slot];
 
     if (dfu_transfer_get_oldest_missing_entry(
                 m_transaction.p_last_requested_entry,
@@ -698,26 +735,18 @@ static void request_missing_data(uint16_t prev_segment, uint16_t *m_data_req_seg
             )
        )
     {
-        dfu_packet_t req_packet;
-        req_packet.packet_type = DFU_PACKET_TYPE_DATA_REQ;
-        req_packet.payload.req_data.segment = ADDR_SEGMENT(p_req_entry, m_transaction.p_start_addr);
-        req_packet.payload.req_data.transaction_id = m_transaction.transaction_id;
-
-        /* Use beacon slot */
-        bl_evt_t tx_evt;
-        tx_evt.type = BL_EVT_TYPE_TX_RADIO;
-        tx_evt.params.tx.radio.p_dfu_packet = &req_packet;
-        tx_evt.params.tx.radio.length = DFU_PACKET_LEN_DATA_REQ;
-        tx_evt.params.tx.radio.interval_type = TX_INTERVAL_TYPE_REQ;
-        tx_evt.params.tx.radio.tx_count = TX_REPEATS_REQ;
-        tx_evt.params.tx.radio.tx_slot = TX_SLOT_BEACON;
-        uint32_t status = bootloader_evt_send(&tx_evt);
+        uint16_t segment = ADDR_SEGMENT(p_req_entry, m_transaction.p_start_addr);
+        uint32_t status = request_data(segment, req_slot);
         if (status == NRF_SUCCESS)
         {
             m_transaction.p_last_requested_entry = (uint32_t*) p_req_entry;
-            *m_data_req_segment = req_packet.payload.req_data.segment;
-            __LOG("TX REQ FOR 0x%x\n", *m_data_req_segment);
+            *m_data_req_segment = segment;
         }
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 /*************** Packet handlers ******************/
@@ -832,32 +861,38 @@ static uint32_t target_rx_start(dfu_packet_t* p_packet, bool* p_do_relay)
     return NRF_SUCCESS;
 }
 
-static uint16_t *match_with_req_segment(uint16_t segment)
+static int32_t match_with_req_segment(uint16_t segment)
 {
     for (uint32_t i = 0; i < REQ_SEGMENT_SIZE; i++)
     {
         if (m_data_req_segments[i] == segment)
         {
-            return &m_data_req_segments[i];
+            return i;
         }
     }
-    return NULL;
+    return -1;
 }
 
 static uint32_t target_rx_data(dfu_packet_t* p_packet, uint16_t length, bool* p_do_relay)
 {
     uint32_t* p_addr = NULL;
     uint32_t error_code = NRF_ERROR_NULL;
-    uint16_t *m_data_req_segment;
+    int32_t req_slot;
 
-    if (m_data_req_segment = match_with_req_segment(p_packet->payload.data.segment))
+    if ((req_slot = match_with_req_segment(p_packet->payload.data.segment)) >= 0)
     {
+        uint16_t *m_data_req_segment = &m_data_req_segments[req_slot];
         __LOG("Retransmission segment #%d\n", p_packet->payload.data.segment);
+        if (0 > req_slot && req_slot >= REQ_SEGMENT_SIZE)
+        {
+            error_code = NRF_ERROR_INTERNAL;
+            goto out;
+        }
         /* Got missing packet, stop requesting. */
         *m_data_req_segment = DATA_REQ_SEGMENT_NONE;
         bl_evt_t tx_abort_evt;
         tx_abort_evt.type = BL_EVT_TYPE_TX_ABORT;
-        tx_abort_evt.params.tx.abort.tx_slot = TX_SLOT_BEACON;
+        tx_abort_evt.params.tx.abort.tx_slot = (uint8_t)req_slot;
         (void) bootloader_evt_send(&tx_abort_evt);
     }
 
@@ -874,7 +909,8 @@ static uint32_t target_rx_data(dfu_packet_t* p_packet, uint16_t length, bool* p_
         {
             error_code = dfu_transfer_data((uint32_t) p_addr,
                     p_packet->payload.data.data,
-                    length - (DFU_PACKET_LEN_DATA - SEGMENT_LENGTH));
+                    length - (DFU_PACKET_LEN_DATA - SEGMENT_LENGTH),
+                    req_slot >= 0);
         }
     }
     else /* treat signature packets at the end */
@@ -908,15 +944,23 @@ static uint32_t target_rx_data(dfu_packet_t* p_packet, uint16_t length, bool* p_
 
     if (error_code != NRF_SUCCESS)
     {
-        return error_code;
+        goto out;
     }
     send_progress_event(p_packet->payload.data.segment, m_transaction.segment_count);
     m_transaction.segments_remaining--;
     *p_do_relay = true;
-    if (m_data_req_segment = match_with_req_segment(DATA_REQ_SEGMENT_NONE))
+    while ((req_slot = match_with_req_segment(DATA_REQ_SEGMENT_NONE)) >= 0)
     {
-        request_missing_data(p_packet->payload.data.segment, m_data_req_segment);
+        if (!request_missing_data(p_packet->payload.data.segment, req_slot))
+        {
+            break;
+        }
     }
+    /* else */
+    /* { */
+        /* re_request_data(); */
+    /* } */
+out:
     return error_code;
 }
 

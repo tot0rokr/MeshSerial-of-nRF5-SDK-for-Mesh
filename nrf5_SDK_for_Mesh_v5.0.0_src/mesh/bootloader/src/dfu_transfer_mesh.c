@@ -146,7 +146,8 @@ uint32_t dfu_transfer_start(
     return status;
 }
 
-uint32_t dfu_transfer_data(uint32_t p_addr, uint8_t* p_data, uint16_t length)
+uint32_t dfu_transfer_data(uint32_t p_addr, uint8_t* p_data, uint16_t length,
+                           bool is_req_segment)
 {
     if (m_transfer.segment_max == INVALID_SEGMENT_INDEX)
     {
@@ -170,11 +171,6 @@ uint32_t dfu_transfer_data(uint32_t p_addr, uint8_t* p_data, uint16_t length)
 
     uint16_t segment = ADDR_SEGMENT(p_addr, m_transfer.p_start_addr);
 
-    if (!segment_is_missing(segment))
-    {
-        return NRF_ERROR_INVALID_STATE;
-    }
-
     if (segment > m_transfer.segment_max)
     {
         /* Ensure that we don't shift out any set bits: Mask the shift on the
@@ -195,8 +191,18 @@ uint32_t dfu_transfer_data(uint32_t p_addr, uint8_t* p_data, uint16_t length)
     }
     else
     {
-        uint16_t segment_offset = m_transfer.segment_max - segment;
-        m_transfer.missing_segments &= ~((bitfield_t)1 << segment_offset);
+        if (segment_is_missing(segment))
+        {
+            uint16_t segment_offset = m_transfer.segment_max - segment;
+            m_transfer.missing_segments &= ~((bitfield_t)1 << segment_offset);
+        }
+        else if (is_req_segment)
+        {
+        }
+        else
+        {
+            return NRF_ERROR_INVALID_STATE;
+        }
     }
 
     m_transfer.segment_prev = segment;
@@ -255,6 +261,7 @@ bool dfu_transfer_get_oldest_missing_entry(
             {
                 *pp_entry = (uint32_t*) addr;
                 *p_len = SEGMENT_LENGTH;
+                m_transfer.missing_segments &= ~((bitfield_t)1 << i);
                 return true;
             }
         }
