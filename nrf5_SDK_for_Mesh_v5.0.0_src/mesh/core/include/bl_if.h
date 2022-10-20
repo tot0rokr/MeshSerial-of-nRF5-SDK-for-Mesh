@@ -133,6 +133,7 @@ typedef enum
     BL_RADIO_INTERVAL_TYPE_EXPONENTIAL,  /**< Exponentially increasing intervals. */
     BL_RADIO_INTERVAL_TYPE_REGULAR,      /**< Regular intervals. */
     BL_RADIO_INTERVAL_TYPE_REGULAR_SLOW, /**< Regular, long intervals. */
+    BL_RADIO_INTERVAL_TYPE_REGULAR_DFU_REQ,
 } bl_radio_interval_type_t;
 
 /** Flash operation types. */

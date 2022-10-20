@@ -47,7 +47,7 @@
 
 /** Number of concurrent DFU transmissions available. */
 #ifndef NRF_MESH_DFU_TX_SLOTS
-#define NRF_MESH_DFU_TX_SLOTS 8
+#define NRF_MESH_DFU_TX_SLOTS 16
 #endif
 
 /** Time to wait for a response to a DFU request before giving up. */

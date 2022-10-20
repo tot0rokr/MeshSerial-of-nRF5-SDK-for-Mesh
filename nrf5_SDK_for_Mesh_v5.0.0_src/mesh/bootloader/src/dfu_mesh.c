@@ -60,6 +60,7 @@
 #define TX_REPEATS_DATA                 (TX_REPEATS_DEFAULT)
 #define TX_REPEATS_RSP                  (TX_REPEATS_DEFAULT)
 #define TX_REPEATS_REQ                  (TX_REPEATS_INF)
+#define TX_REPEATS_REQ_RELAY            (1)
 
 #define TX_INTERVAL_TYPE_FWID           (BL_RADIO_INTERVAL_TYPE_REGULAR_SLOW)
 #define TX_INTERVAL_TYPE_DFU_REQ        (BL_RADIO_INTERVAL_TYPE_REGULAR)
@@ -67,6 +68,7 @@
 #define TX_INTERVAL_TYPE_READY          (BL_RADIO_INTERVAL_TYPE_REGULAR)
 #define TX_INTERVAL_TYPE_DATA           (BL_RADIO_INTERVAL_TYPE_EXPONENTIAL)
 #define TX_INTERVAL_TYPE_RSP            (BL_RADIO_INTERVAL_TYPE_EXPONENTIAL)
+/* #define TX_INTERVAL_TYPE_REQ            (BL_RADIO_INTERVAL_TYPE_REGULAR) */
 #define TX_INTERVAL_TYPE_REQ            (BL_RADIO_INTERVAL_TYPE_REGULAR_DFU_REQ)
 
 #define STATE_TIMEOUT_RAMPDOWN          (30000000)
@@ -77,9 +79,9 @@
 #define START_ADDRESS_UNKNOWN           (0xFFFFFFFF)
 
 #define REQ_CACHE_SIZE                  (4)
-#define REQ_RX_COUNT_RETRY              (8)
+#define REQ_RX_COUNT_RETRY(distance)    (7 - (distance) / 8)
 
-#define REQ_SEGMENT_SIZE                (3) /* Must be lower (tx_slot size - 1) */
+#define REQ_SEGMENT_SIZE                (3) /* Must be lower (m_tx_slot - 1) */
 #define DATA_REQ_SEGMENT_NONE           (0)
 
 #define LOST_START_EDGE                 (10)
@@ -104,6 +106,7 @@ typedef struct
     uint32_t*       p_bank_addr;
     uint32_t*       p_indicated_start_addr;
     uint32_t*       p_last_requested_entry;
+    uint32_t*       p_current_max_entry;
     uint32_t        length;
     uint32_t        signature_length;
     uint8_t         signature[DFU_SIGNATURE_LEN];
@@ -445,9 +448,15 @@ static uint32_t relay_packet(dfu_packet_t* p_packet, uint16_t length)
     {
         repeats = TX_REPEATS_START;
     }
+#if 0
+    else if (p_packet->packet_type == DFU_PACKET_TYPE_DATA_REQ)
+    {
+        repeats = TX_REPEATS_REQ_RELAY;
+    }
+#endif
 
     uint32_t status = packet_tx_dynamic(p_packet, length, TX_INTERVAL_TYPE_DATA, repeats);
-    if (status == NRF_SUCCESS)
+    if (status == NRF_SUCCESS && p_packet->packet_type != DFU_PACKET_TYPE_DATA_REQ)
     {
         packet_cache_put(p_packet);
     }
@@ -722,7 +731,6 @@ static bool request_missing_data(uint16_t prev_segment, uint32_t req_slot)
 {
     uint32_t* p_req_entry = NULL;
     uint32_t req_entry_len = 0;
-    uint16_t *m_data_req_segment = &m_data_req_segments[req_slot];
 
     if (dfu_transfer_get_oldest_missing_entry(
                 m_transaction.p_last_requested_entry,
@@ -730,7 +738,7 @@ static bool request_missing_data(uint16_t prev_segment, uint32_t req_slot)
                 &req_entry_len) &&
             (
              /* don't request the previous packet yet */
-             (ADDR_SEGMENT(p_req_entry, m_transaction.p_start_addr) < (uint32_t)(prev_segment - 1)) ||
+             (ADDR_SEGMENT(p_req_entry, m_transaction.p_start_addr) < (uint32_t)(prev_segment - 2)) ||
              (m_transaction.segment_count == prev_segment)
             )
        )
@@ -740,7 +748,7 @@ static bool request_missing_data(uint16_t prev_segment, uint32_t req_slot)
         if (status == NRF_SUCCESS)
         {
             m_transaction.p_last_requested_entry = (uint32_t*) p_req_entry;
-            *m_data_req_segment = segment;
+            m_data_req_segments[req_slot] = segment;
         }
         return true;
     }
@@ -881,13 +889,14 @@ static uint32_t target_rx_data(dfu_packet_t* p_packet, uint16_t length, bool* p_
 
     if ((req_slot = match_with_req_segment(p_packet->payload.data.segment)) >= 0)
     {
-        uint16_t *m_data_req_segment = &m_data_req_segments[req_slot];
-        __LOG("Retransmission segment #%d\n", p_packet->payload.data.segment);
         if (0 > req_slot && req_slot >= REQ_SEGMENT_SIZE)
         {
             error_code = NRF_ERROR_INTERNAL;
             goto out;
         }
+        uint16_t *m_data_req_segment = &m_data_req_segments[req_slot];
+        __LOG("Retransmission segment #%d\n", p_packet->payload.data.segment);
+
         /* Got missing packet, stop requesting. */
         *m_data_req_segment = DATA_REQ_SEGMENT_NONE;
         bl_evt_t tx_abort_evt;
@@ -910,7 +919,7 @@ static uint32_t target_rx_data(dfu_packet_t* p_packet, uint16_t length, bool* p_
             error_code = dfu_transfer_data((uint32_t) p_addr,
                     p_packet->payload.data.data,
                     length - (DFU_PACKET_LEN_DATA - SEGMENT_LENGTH),
-                    req_slot >= 0);
+                    &m_transaction.p_current_max_entry);
         }
     }
     else /* treat signature packets at the end */
@@ -956,10 +965,6 @@ static uint32_t target_rx_data(dfu_packet_t* p_packet, uint16_t length, bool* p_
             break;
         }
     }
-    /* else */
-    /* { */
-        /* re_request_data(); */
-    /* } */
 out:
     return error_code;
 }
@@ -1222,12 +1227,14 @@ static uint32_t handle_data_req_packet(dfu_packet_t* p_packet)
         else /* In transfer */
         {
             req_cache_entry_t* p_req_entry = NULL;
+            uint16_t max_segment = ADDR_SEGMENT(m_transaction.p_current_max_entry, m_transaction.p_start_addr);
             /* check that we haven't served this request recently. */
             for (uint32_t i = 0; i < REQ_CACHE_SIZE; ++i)
             {
                 if (m_req_cache[i].segment == p_packet->payload.req_data.segment)
                 {
-                    if (m_req_cache[i].rx_count++ < REQ_RX_COUNT_RETRY)
+                    if (m_req_cache[i].rx_count++ <
+                            REQ_RX_COUNT_RETRY(max_segment - p_packet->payload.req_data.segment))
                     {
                         return NRF_SUCCESS;
                     }
