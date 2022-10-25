@@ -456,7 +456,7 @@ static uint32_t relay_packet(dfu_packet_t* p_packet, uint16_t length)
 #endif
 
     uint32_t status = packet_tx_dynamic(p_packet, length, TX_INTERVAL_TYPE_DATA, repeats);
-    if (status == NRF_SUCCESS && p_packet->packet_type != DFU_PACKET_TYPE_DATA_REQ)
+    if (status == NRF_SUCCESS)
     {
         packet_cache_put(p_packet);
     }
@@ -711,19 +711,6 @@ static uint32_t request_data(uint16_t segment, uint32_t req_slot)
         __LOG("TX REQ FOR %d\n", segment);
     }
     return status;
-}
-
-static void re_request_data(void)
-{
-    uint32_t oldest_segment = 0;
-    for (uint32_t i = 1; i < REQ_SEGMENT_SIZE; i++)
-    {
-        if (m_data_req_segments[i] < m_data_req_segments[oldest_segment])
-        {
-            oldest_segment = i;
-        }
-    }
-    request_data(m_data_req_segments[oldest_segment], oldest_segment);
 }
 
 /* check whether we've lost any entries, and request them */
