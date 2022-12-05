@@ -73,16 +73,17 @@
 
 #define STATE_TIMEOUT_RAMPDOWN          (30000000)
 
-#define TX_SLOT_BEACON                  (0)
+#define REQ_SEGMENT_SIZE                (3) /* Must be lower (m_tx_slot - 1) */
+#define DATA_REQ_SEGMENT_NONE           (0)
+
+#define TX_SLOT_BEACON                  (REQ_SEGMENT_SIZE)
+#define TX_SLOT_BEACON_SIZE             (1)
 #define TX_SLOT_READY_FORWARDING        (0) /**< Slot to use for ready-packet forwarding. */
 
 #define START_ADDRESS_UNKNOWN           (0xFFFFFFFF)
 
 #define REQ_CACHE_SIZE                  (4)
 #define REQ_RX_COUNT_RETRY(distance)    (7 - (distance) / 8)
-
-#define REQ_SEGMENT_SIZE                (3) /* Must be lower (m_tx_slot - 1) */
-#define DATA_REQ_SEGMENT_NONE           (0)
 
 #define LOST_START_EDGE                 (10)
 
@@ -286,10 +287,10 @@ static uint32_t packet_tx_dynamic(dfu_packet_t* p_packet,
     bl_radio_interval_type_t interval_type,
     uint8_t repeats)
 {
-    static uint8_t tx_slot = REQ_SEGMENT_SIZE;
-    if (tx_slot >= m_tx_slots || tx_slot == 0)
+    static uint8_t tx_slot = REQ_SEGMENT_SIZE + TX_SLOT_BEACON_SIZE;
+    if (tx_slot >= m_tx_slots)
     {
-        tx_slot = REQ_SEGMENT_SIZE;
+        tx_slot = REQ_SEGMENT_SIZE + TX_SLOT_BEACON_SIZE;
     }
     bl_evt_t tx_evt;
     tx_evt.type = BL_EVT_TYPE_TX_RADIO;
@@ -876,7 +877,7 @@ static uint32_t target_rx_data(dfu_packet_t* p_packet, uint16_t length, bool* p_
 
     if ((req_slot = match_with_req_segment(p_packet->payload.data.segment)) >= 0)
     {
-        if (0 > req_slot && req_slot >= REQ_SEGMENT_SIZE)
+        if (0 > req_slot || req_slot >= REQ_SEGMENT_SIZE)
         {
             error_code = NRF_ERROR_INTERNAL;
             goto out;
