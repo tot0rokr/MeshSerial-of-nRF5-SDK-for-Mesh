@@ -554,14 +554,15 @@ static uint32_t dfu_evt_handler(const bl_evt_t* p_evt)
 
         case BL_EVT_TYPE_TX_RADIO:
             {
-                if (p_evt->params.tx.radio.p_dfu_packet->packet_type == 0xFFFB)
+                if (p_evt->params.tx.radio.p_dfu_packet->packet_type >= 0xFFFA
+                    && p_evt->params.tx.radio.p_dfu_packet->packet_type <= 0xFFFC)
                 {
-                    __LOG(LOG_SRC_DFU, LOG_LEVEL_INFO, "\tRADIO TX! SLOT %d, count %d, interval: %s, handle: %x req_segment: %d\n",
+                    __LOG(LOG_SRC_DFU, LOG_LEVEL_INFO, "\tRADIO TX! SLOT %d, count %d, interval: %s, handle: %x, segment: %d\n",
                         p_evt->params.tx.radio.tx_slot,
                         p_evt->params.tx.radio.tx_count,
                         p_evt->params.tx.radio.interval_type == BL_RADIO_INTERVAL_TYPE_EXPONENTIAL ? "exponential" : "periodic",
                         p_evt->params.tx.radio.p_dfu_packet->packet_type,
-                        p_evt->params.tx.radio.p_dfu_packet->payload.req_data.segment
+                        p_evt->params.tx.radio.p_dfu_packet->payload.data.segment
                      );
                 }
                 else
