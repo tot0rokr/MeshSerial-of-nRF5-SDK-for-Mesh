@@ -52,17 +52,17 @@
 
 /** Time to wait for a response to a DFU request before giving up. */
 #ifndef NRF_MESH_DFU_REQ_TIMEOUT_US
-#define NRF_MESH_DFU_REQ_TIMEOUT_US                     (600000000UL)
+#define NRF_MESH_DFU_REQ_TIMEOUT_US                     (120000000UL)
 #endif
 
 /** Time to wait for a response to a DFU relay request before giving up. */
 #ifndef NRF_MESH_DFU_RELAY_TIMEOUT_US
-#define NRF_MESH_DFU_RELAY_TIMEOUT_US                   (600000000UL)
+#define NRF_MESH_DFU_RELAY_TIMEOUT_US                   (120000000UL)
 #endif
 
 /** Time to wait for data during a transfer. */
 #ifndef NRF_MESH_DFU_DATA_TRANSFER_TIMEOUT_US
-#define NRF_MESH_DFU_DATA_TRANSFER_TIMEOUT_US           (600000000UL)
+#define NRF_MESH_DFU_DATA_TRANSFER_TIMEOUT_US           (120000000UL)
 #endif
 
 /** @} end of NRF_MESH_CONFIG_DFU */
