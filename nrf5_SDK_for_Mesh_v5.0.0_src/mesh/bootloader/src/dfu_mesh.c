@@ -506,7 +506,7 @@ static void send_bank_notifications(void)
 /********** STATE MACHINE ENTRY POINTS ***********/
 static void start_find_fwid(void)
 {
-    beacon_set(BEACON_TYPE_FWID);
+    /* beacon_set(BEACON_TYPE_FWID); */
     SET_STATE(DFU_STATE_FIND_FWID);
     memset(&m_transaction, 0, sizeof(transaction_t));
 }
