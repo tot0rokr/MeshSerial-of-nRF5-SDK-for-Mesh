@@ -101,6 +101,7 @@
 #define SERIAL_OPCODE_CMD_PROV_ECDH_SECRET                    (0x68) /**< Params: @ref serial_cmd_prov_ecdh_data_t */
 #define SERIAL_OPCODE_CMD_PROV_KEYPAIR_SET                    (0x69) /**< Params: @ref serial_cmd_prov_keypair_t */
 #define SERIAL_OPCODE_CMD_PROV_CAPABILITIES_SET               (0x6A) /**< Params: @ref serial_cmd_prov_caps_t */
+#define SERIAL_OPCODE_CMD_PROV_ALLOC_ADDR                     (0x6B) /**< Params: @ref serial_cmd_prov_alloc_addr_t */
 #define SERIAL_OPCODE_CMD_RANGE_PROV_END                      (0x6F) /**< PROVISIONING range end. */
 
 #define SERIAL_OPCODE_CMD_RANGE_OPENMESH_START                (0x70) /**< OPENMESH range start. */
@@ -329,7 +330,6 @@ typedef struct __attribute((packed))
     uint8_t  network_key[NRF_MESH_KEY_SIZE];  /**< Network key to give to the device. */
     uint16_t network_key_index;               /**< Network key index. */
     uint32_t iv_index;                        /**< Initial IV index of the network. */
-    uint16_t address;                         /**< Unicast address to assign to the device. */
     uint8_t  iv_update_flag;                  /**< IV update in progress flag. */
     uint8_t  key_refresh_flag;                /**< Key refresh in progress flag. */
     uint8_t  attention_duration_s;            /**< Time in seconds during which the device will identify itself using any means it can. */
@@ -358,15 +358,23 @@ typedef struct __attribute((packed))
     uint8_t shared_secret[NRF_MESH_ECDH_SHARED_SECRET_SIZE]; /**< ECDH shared secret. */
 } serial_cmd_prov_ecdh_data_t;
 
+/** Provisioning address set command parameters. */
+typedef struct __attribute((packed))
+{
+    uint8_t  context_id; /**< Context ID to set address for session. */
+    uint16_t address;    /**< Unicast address to assign to the device. */
+} serial_cmd_prov_alloc_addr_t;
+
 /** Union of all provisioning command parameters. */
 typedef union __attribute((packed))
 {
-    serial_cmd_prov_keypair_t   keypair;   /**< Parameters for the Set keypair packet. */
-    serial_cmd_prov_caps_t      caps;      /**< Parameters for the Set capabilities packet. */
-    serial_cmd_prov_data_t      data;      /**< Parameters for the Provisioning data packet. */
-    serial_cmd_prov_oob_use_t   oob_use;   /**< Parameters for the OOB use packet. */
-    serial_cmd_prov_auth_data_t auth_data; /**< Parameters for the Authentication data packet. */
-    serial_cmd_prov_ecdh_data_t ecdh_data; /**< Parameters for the ECDH shared secret packet. */
+    serial_cmd_prov_keypair_t    keypair;    /**< Parameters for the Set keypair packet. */
+    serial_cmd_prov_caps_t       caps;       /**< Parameters for the Set capabilities packet. */
+    serial_cmd_prov_data_t       data;       /**< Parameters for the Provisioning data packet. */
+    serial_cmd_prov_oob_use_t    oob_use;    /**< Parameters for the OOB use packet. */
+    serial_cmd_prov_auth_data_t  auth_data;  /**< Parameters for the Authentication data packet. */
+    serial_cmd_prov_ecdh_data_t  ecdh_data;  /**< Parameters for the ECDH shared secret packet. */
+    serial_cmd_prov_alloc_addr_t alloc_addr; /**< Parameters for the assigning address packet. */
 } serial_cmd_prov_t;
 
 /******************* Mesh commands *********************/

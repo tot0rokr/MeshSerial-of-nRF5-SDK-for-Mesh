@@ -301,8 +301,6 @@ class Provision(CommandPacket):
             Network key index.
         iv_index : uint32_t
             Initial IV index of the network.
-        address : uint16_t
-            Unicast address to assign to the device.
         iv_update_flag : uint8_t
             IV update in progress flag.
         key_refresh_flag : uint8_t
@@ -310,14 +308,13 @@ class Provision(CommandPacket):
         attention_duration_s : uint8_t
             Time in seconds during which the device will identify itself using any means it can.
     """
-    def __init__(self, context_id, target_uuid, network_key, network_key_index, iv_index, address, iv_update_flag, key_refresh_flag, attention_duration_s):
+    def __init__(self, context_id, target_uuid, network_key, network_key_index, iv_index, iv_update_flag, key_refresh_flag, attention_duration_s):
         __data = bytearray()
         __data += struct.pack("<B", context_id)
         __data += iterable_to_barray(target_uuid)
         __data += iterable_to_barray(network_key)
         __data += struct.pack("<H", network_key_index)
         __data += struct.pack("<I", iv_index)
-        __data += struct.pack("<H", address)
         __data += struct.pack("<B", iv_update_flag)
         __data += struct.pack("<B", key_refresh_flag)
         __data += struct.pack("<B", attention_duration_s)
@@ -437,6 +434,21 @@ class CapabilitiesSet(CommandPacket):
         __data += struct.pack("<H", input_oob_actions)
         super(CapabilitiesSet, self).__init__(0x6A, __data)
 
+class AllocAddr(CommandPacket):
+    """Used to assign the address of provisioning node.
+
+    Parameters
+    ----------
+        context_id : uint8_t
+            ID of the context to allocate the address for node.
+        address : uint16_t
+            Unicast address to assign to the device.
+    """
+    def __init__(self, context_id, address):
+        __data = bytearray()
+        __data += struct.pack("<B", context_id)
+        __data += struct.pack("<H", address)
+        super(AllocAddr, self).__init__(0x6B, __data)
 
 class Init(CommandPacket):
     """Not implemented."""

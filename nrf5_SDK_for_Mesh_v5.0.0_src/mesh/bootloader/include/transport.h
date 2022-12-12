@@ -43,7 +43,7 @@
 
 #define TX_REPEATS_EXPONENTIAL_MAX      (12)
 #define TX_REPEATS_INF                  (0xFF)
-#define TRANSPORT_TX_SLOTS              (8)
+#define TRANSPORT_TX_SLOTS              (16)
 
 typedef enum
 {
