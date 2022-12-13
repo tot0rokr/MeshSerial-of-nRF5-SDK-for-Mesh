@@ -1,3 +1,7 @@
+# bootloader config
+bootloader_config.json
+private_key.txt
+
 # DFU hex files
 dfu/*.hex
 
