@@ -49,7 +49,8 @@ uint32_t dfu_transfer_start(
         uint32_t size,
         bool final_transfer);
 
-uint32_t dfu_transfer_data(uint32_t p_addr, uint8_t* p_data, uint16_t length);
+uint32_t dfu_transfer_data(uint32_t p_addr, uint8_t* p_data, uint16_t length,
+                           uint32_t **pp_max_addr);
 
 bool dfu_transfer_has_entry(uint32_t* p_addr, uint8_t* p_out_buffer, uint16_t len);
 

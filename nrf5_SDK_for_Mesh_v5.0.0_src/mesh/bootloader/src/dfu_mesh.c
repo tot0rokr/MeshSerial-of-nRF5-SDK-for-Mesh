@@ -81,7 +81,7 @@
 #define START_ADDRESS_UNKNOWN           (0xFFFFFFFF)
 
 #define REQ_CACHE_SIZE                  (4)
-#define REQ_RX_COUNT_RETRY              (8)
+#define REQ_RX_COUNT_RETRY(distance)    (7 - (distance) / 8)
 
 #define LOST_START_EDGE                 (10)
 
@@ -105,6 +105,7 @@ typedef struct
     uint32_t*       p_bank_addr;
     uint32_t*       p_indicated_start_addr;
     uint32_t*       p_last_requested_entry;
+    uint32_t*       p_current_max_entry;
     uint32_t        length;
     uint32_t        signature_length;
     uint8_t         signature[DFU_SIGNATURE_LEN];
@@ -897,7 +898,8 @@ static uint32_t target_rx_data(dfu_packet_t* p_packet, uint16_t length, bool* p_
         {
             error_code = dfu_transfer_data((uint32_t) p_addr,
                     p_packet->payload.data.data,
-                    length - (DFU_PACKET_LEN_DATA - SEGMENT_LENGTH));
+                    length - (DFU_PACKET_LEN_DATA - SEGMENT_LENGTH),
+                    &m_transaction.p_current_max_entry);
         }
     }
     else /* treat signature packets at the end */
@@ -1205,12 +1207,14 @@ static uint32_t handle_data_req_packet(dfu_packet_t* p_packet)
         else /* In transfer */
         {
             req_cache_entry_t* p_req_entry = NULL;
+            uint16_t max_segment = ADDR_SEGMENT(m_transaction.p_current_max_entry, m_transaction.p_start_addr);
             /* check that we haven't served this request recently. */
             for (uint32_t i = 0; i < REQ_CACHE_SIZE; ++i)
             {
                 if (m_req_cache[i].segment == p_packet->payload.req_data.segment)
                 {
-                    if (m_req_cache[i].rx_count++ < REQ_RX_COUNT_RETRY)
+                    if (m_req_cache[i].rx_count++ <
+                            REQ_RX_COUNT_RETRY(max_segment - p_packet->payload.req_data.segment))
                     {
                         return NRF_SUCCESS;
                     }

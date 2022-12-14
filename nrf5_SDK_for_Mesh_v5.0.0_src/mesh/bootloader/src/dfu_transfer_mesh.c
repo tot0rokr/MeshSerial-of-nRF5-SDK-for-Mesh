@@ -146,7 +146,8 @@ uint32_t dfu_transfer_start(
     return status;
 }
 
-uint32_t dfu_transfer_data(uint32_t p_addr, uint8_t* p_data, uint16_t length)
+uint32_t dfu_transfer_data(uint32_t p_addr, uint8_t* p_data, uint16_t length,
+                           uint32_t **pp_max_addr)
 {
     if (m_transfer.segment_max == INVALID_SEGMENT_INDEX)
     {
@@ -192,6 +193,7 @@ uint32_t dfu_transfer_data(uint32_t p_addr, uint8_t* p_data, uint16_t length)
         m_transfer.missing_segments = (m_transfer.missing_segments << segment_offset) | shift_mask;
         m_transfer.missing_segments &= ~1ULL; /* The newest segment isn't missing. */
         m_transfer.segment_max = segment;
+        *pp_max_addr = (uint32_t *) p_addr;
     }
     else
     {
