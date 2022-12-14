@@ -60,6 +60,7 @@
 #define TX_REPEATS_DATA                 (TX_REPEATS_DEFAULT)
 #define TX_REPEATS_RSP                  (TX_REPEATS_DEFAULT)
 #define TX_REPEATS_REQ                  (TX_REPEATS_INF)
+#define TX_REPEATS_REQ_RELAY            (1)
 
 #define TX_INTERVAL_TYPE_FWID           (BL_RADIO_INTERVAL_TYPE_REGULAR_SLOW)
 #define TX_INTERVAL_TYPE_DFU_REQ        (BL_RADIO_INTERVAL_TYPE_REGULAR)
@@ -447,6 +448,12 @@ static uint32_t relay_packet(dfu_packet_t* p_packet, uint16_t length)
     {
         repeats = TX_REPEATS_START;
     }
+#if 0
+    else if (p_packet->packet_type == DFU_PACKET_TYPE_DATA_REQ)
+    {
+        repeats = TX_REPEATS_REQ_RELAY;
+    }
+#endif
 
     uint32_t status = packet_tx_dynamic(p_packet, length, TX_INTERVAL_TYPE_DATA, repeats);
     if (status == NRF_SUCCESS)
