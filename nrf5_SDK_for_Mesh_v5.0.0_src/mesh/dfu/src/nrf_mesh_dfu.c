@@ -551,12 +551,27 @@ static uint32_t dfu_evt_handler(const bl_evt_t* p_evt)
 
         case BL_EVT_TYPE_TX_RADIO:
             {
-                __LOG(LOG_SRC_DFU, LOG_LEVEL_INFO, "\tRADIO TX! SLOT %d, count %d, interval: %s, handle: %x\n",
+                if (p_evt->params.tx.radio.p_dfu_packet->packet_type >= 0xFFFA
+                    && p_evt->params.tx.radio.p_dfu_packet->packet_type <= 0xFFFC)
+                {
+                    __LOG(LOG_SRC_DFU, LOG_LEVEL_INFO, "\tRADIO TX! SLOT %d, count %d, interval: %s, handle: %x, segment: %d\n",
+                        p_evt->params.tx.radio.tx_slot,
+                        p_evt->params.tx.radio.tx_count,
+                        p_evt->params.tx.radio.interval_type == BL_RADIO_INTERVAL_TYPE_EXPONENTIAL ? "exponential" : "periodic",
+                        p_evt->params.tx.radio.p_dfu_packet->packet_type,
+                        p_evt->params.tx.radio.p_dfu_packet->payload.data.segment
+                     );
+                }
+                else
+                {
+                    __LOG(LOG_SRC_DFU, LOG_LEVEL_INFO, "\tRADIO TX! SLOT %d, count %d, interval: %s, handle: %x\n",
                         p_evt->params.tx.radio.tx_slot,
                         p_evt->params.tx.radio.tx_count,
                         p_evt->params.tx.radio.interval_type == BL_RADIO_INTERVAL_TYPE_EXPONENTIAL ? "exponential" : "periodic",
                         p_evt->params.tx.radio.p_dfu_packet->packet_type
                      );
+                }
+
 
                 dfu_tx_t* p_tx_slot = &m_tx_slots[p_evt->params.tx.radio.tx_slot];
 
