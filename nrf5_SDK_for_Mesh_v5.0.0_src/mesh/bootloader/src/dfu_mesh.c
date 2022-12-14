@@ -70,7 +70,7 @@
 #define TX_INTERVAL_TYPE_RSP            (BL_RADIO_INTERVAL_TYPE_EXPONENTIAL)
 #define TX_INTERVAL_TYPE_REQ            (BL_RADIO_INTERVAL_TYPE_REGULAR_DFU_REQ)
 
-#define STATE_TIMEOUT_RAMPDOWN          (30000000)
+#define STATE_TIMEOUT_RAMPDOWN          (300000000)
 
 #define REQ_SEGMENT_SIZE                (3) /* Must be lower (m_tx_slot - 1) */
 #define DATA_REQ_SEGMENT_NONE           (0)
