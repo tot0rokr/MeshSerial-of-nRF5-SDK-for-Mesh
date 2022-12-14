@@ -252,7 +252,7 @@ bool dfu_transfer_get_oldest_missing_entry(
         {
             uint16_t segment = m_transfer.segment_max - i;
             uint32_t addr = SEGMENT_ADDR(segment, m_transfer.p_start_addr);
-            if (addr >= (uint32_t) p_start_addr)
+            if (addr > (uint32_t) p_start_addr)
             {
                 *pp_entry = (uint32_t*) addr;
                 *p_len = SEGMENT_LENGTH;
