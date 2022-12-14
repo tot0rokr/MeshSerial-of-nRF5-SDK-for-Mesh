@@ -71,6 +71,7 @@ NRF_MESH_STATIC_ASSERT(NRF_MESH_DFU_ROLE__LAST      <= UINT8_MAX);
 #define DFU_TX_REDUNDANCY_MAX               (2)         /**< Max number of observed retransmits before a transmit is regarded redundant. */
 #define DFU_TX_INTERVAL_EXPONENTIAL_US      (100000)    /**< Time between the first two transmits in exponential packets. */
 #define DFU_TX_INTERVAL_REGULAR_US          (100000)    /**< Time between transmits for fast regular transmits. */
+#define DFU_TX_INTERVAL_REGULAR_MEDIUM_US   (1000000)   /**< Time between transmits for medium regular transmits. */
 #define DFU_TX_INTERVAL_REGULAR_SLOW_US     (10000000)  /**< Time between transmits for slow regular transmits. */
 #define DFU_TX_DELAY_RANDOMIZATION_MASK_US  (0xFFFF)    /**< Maximum variation in TX time offsets. */
 #define DFU_TX_TIMER_MARGIN_US              (1000)      /**< Time margin for a timeout to be considered instant. */
@@ -206,6 +207,8 @@ static uint32_t next_tx_timeout(dfu_tx_t* p_tx)
             return ((p_tx->order_time + DFU_TX_INTERVAL_REGULAR_US * p_tx->tx_count) + p_tx->tx_randomization_offset_us);
         case BL_RADIO_INTERVAL_TYPE_REGULAR_SLOW:
             return ((p_tx->order_time + DFU_TX_INTERVAL_REGULAR_SLOW_US * p_tx->tx_count) + p_tx->tx_randomization_offset_us);
+        case BL_RADIO_INTERVAL_TYPE_REGULAR_DFU_REQ:
+            return ((p_tx->order_time + DFU_TX_INTERVAL_REGULAR_MEDIUM_US * p_tx->tx_count) + p_tx->tx_randomization_offset_us);
         default:
             /* Unknown type */
             NRF_MESH_ASSERT(false);
@@ -551,12 +554,27 @@ static uint32_t dfu_evt_handler(const bl_evt_t* p_evt)
 
         case BL_EVT_TYPE_TX_RADIO:
             {
-                __LOG(LOG_SRC_DFU, LOG_LEVEL_INFO, "\tRADIO TX! SLOT %d, count %d, interval: %s, handle: %x\n",
+                if (p_evt->params.tx.radio.p_dfu_packet->packet_type >= 0xFFFA
+                    && p_evt->params.tx.radio.p_dfu_packet->packet_type <= 0xFFFC)
+                {
+                    __LOG(LOG_SRC_DFU, LOG_LEVEL_INFO, "\tRADIO TX! SLOT %d, count %d, interval: %s, handle: %x, segment: %d\n",
+                        p_evt->params.tx.radio.tx_slot,
+                        p_evt->params.tx.radio.tx_count,
+                        p_evt->params.tx.radio.interval_type == BL_RADIO_INTERVAL_TYPE_EXPONENTIAL ? "exponential" : "periodic",
+                        p_evt->params.tx.radio.p_dfu_packet->packet_type,
+                        p_evt->params.tx.radio.p_dfu_packet->payload.data.segment
+                     );
+                }
+                else
+                {
+                    __LOG(LOG_SRC_DFU, LOG_LEVEL_INFO, "\tRADIO TX! SLOT %d, count %d, interval: %s, handle: %x\n",
                         p_evt->params.tx.radio.tx_slot,
                         p_evt->params.tx.radio.tx_count,
                         p_evt->params.tx.radio.interval_type == BL_RADIO_INTERVAL_TYPE_EXPONENTIAL ? "exponential" : "periodic",
                         p_evt->params.tx.radio.p_dfu_packet->packet_type
                      );
+                }
+
 
                 dfu_tx_t* p_tx_slot = &m_tx_slots[p_evt->params.tx.radio.tx_slot];
 
