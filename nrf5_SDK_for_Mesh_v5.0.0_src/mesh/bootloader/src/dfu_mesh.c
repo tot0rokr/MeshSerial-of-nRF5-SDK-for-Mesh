@@ -725,7 +725,7 @@ static bool request_missing_data(uint16_t prev_segment, uint32_t req_slot)
                 &req_entry_len) &&
             (
              /* don't request the previous packet yet */
-             (ADDR_SEGMENT(p_req_entry, m_transaction.p_start_addr) < (uint32_t)(prev_segment - 1)) ||
+             (ADDR_SEGMENT(p_req_entry, m_transaction.p_start_addr) < (uint32_t)(prev_segment - 2)) ||
              (m_transaction.segment_count == prev_segment)
             )
        )
