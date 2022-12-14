@@ -71,6 +71,7 @@ NRF_MESH_STATIC_ASSERT(NRF_MESH_DFU_ROLE__LAST      <= UINT8_MAX);
 #define DFU_TX_REDUNDANCY_MAX               (2)         /**< Max number of observed retransmits before a transmit is regarded redundant. */
 #define DFU_TX_INTERVAL_EXPONENTIAL_US      (100000)    /**< Time between the first two transmits in exponential packets. */
 #define DFU_TX_INTERVAL_REGULAR_US          (100000)    /**< Time between transmits for fast regular transmits. */
+#define DFU_TX_INTERVAL_REGULAR_MEDIUM_US   (1000000)   /**< Time between transmits for medium regular transmits. */
 #define DFU_TX_INTERVAL_REGULAR_SLOW_US     (10000000)  /**< Time between transmits for slow regular transmits. */
 #define DFU_TX_DELAY_RANDOMIZATION_MASK_US  (0xFFFF)    /**< Maximum variation in TX time offsets. */
 #define DFU_TX_TIMER_MARGIN_US              (1000)      /**< Time margin for a timeout to be considered instant. */
@@ -206,6 +207,8 @@ static uint32_t next_tx_timeout(dfu_tx_t* p_tx)
             return ((p_tx->order_time + DFU_TX_INTERVAL_REGULAR_US * p_tx->tx_count) + p_tx->tx_randomization_offset_us);
         case BL_RADIO_INTERVAL_TYPE_REGULAR_SLOW:
             return ((p_tx->order_time + DFU_TX_INTERVAL_REGULAR_SLOW_US * p_tx->tx_count) + p_tx->tx_randomization_offset_us);
+        case BL_RADIO_INTERVAL_TYPE_REGULAR_DFU_REQ:
+            return ((p_tx->order_time + DFU_TX_INTERVAL_REGULAR_MEDIUM_US * p_tx->tx_count) + p_tx->tx_randomization_offset_us);
         default:
             /* Unknown type */
             NRF_MESH_ASSERT(false);
