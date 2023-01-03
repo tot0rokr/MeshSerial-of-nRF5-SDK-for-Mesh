@@ -211,14 +211,86 @@ bool is_upgrade(fwid_union_t* p_fwid, dfu_type_t dfu_type)
     }
 }
 
+int compare_app_id(app_id_t* p_app_id1, app_id_t* p_app_id2)
+{
+    if (p_app_id1->app_id     == p_app_id2->app_id &&
+        p_app_id1->company_id == p_app_id2->company_id)
+    {
+        if (p_app_id1->app_version > p_app_id2->app_version)
+        {
+            return 1;
+        }
+        else if (p_app_id1->app_version < p_app_id2->app_version)
+        {
+            return 2;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
+bool app_is_older(app_id_t* p_app_id)
+{
+    bl_info_entry_t* p_fwid_entry = bootloader_info_entry_get(BL_INFO_TYPE_VERSION);
+    if (p_fwid_entry != NULL)
+    {
+        if (compare_app_id(p_app_id, &p_fwid_entry->version.app) != 2)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool app_is_newer(app_id_t* p_app_id)
 {
     bl_info_entry_t* p_fwid_entry = bootloader_info_entry_get(BL_INFO_TYPE_VERSION);
     if (p_fwid_entry != NULL)
     {
-        return (p_app_id->app_id     == p_fwid_entry->version.app.app_id &&
-                p_app_id->company_id == p_fwid_entry->version.app.company_id &&
-                p_app_id->app_version > p_fwid_entry->version.app.app_version);
+        if (compare_app_id(p_app_id, &p_fwid_entry->version.app) != 1)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+int compare_bootloader_id(bl_id_t* p_bl_id1, bl_id_t* p_bl_id2)
+{
+    if (p_bl_id1->id == p_bl_id2->id)
+    {
+        if (p_bl_id1->ver > p_bl_id2->ver)
+        {
+            return 1;
+        }
+        else if (p_bl_id1->ver < p_bl_id2->ver)
+        {
+            return 2;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
+bool bootloader_is_older(bl_id_t bl_id)
+{
+    bl_info_entry_t* p_fwid_entry = bootloader_info_entry_get(BL_INFO_TYPE_VERSION);
+    if (p_fwid_entry != NULL)
+    {
+        if (compare_bootloader_id(&bl_id, &p_fwid_entry->version.bootloader) != 2)
+        {
+            return false;
+        }
     }
 
     return true;
@@ -229,8 +301,10 @@ bool bootloader_is_newer(bl_id_t bl_id)
     bl_info_entry_t* p_fwid_entry = bootloader_info_entry_get(BL_INFO_TYPE_VERSION);
     if (p_fwid_entry != NULL)
     {
-        return (bl_id.id == p_fwid_entry->version.bootloader.id &&
-                bl_id.ver > p_fwid_entry->version.bootloader.ver);
+        if (compare_bootloader_id(&bl_id, &p_fwid_entry->version.bootloader) != 1)
+        {
+            return false;
+        }
     }
 
     return true;

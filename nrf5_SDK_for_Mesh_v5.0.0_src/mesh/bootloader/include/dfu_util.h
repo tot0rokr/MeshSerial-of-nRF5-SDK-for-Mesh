@@ -71,7 +71,15 @@ uint32_t* addr_from_seg(uint16_t segment, uint32_t* p_start_addr);
 #ifdef BOOTLOADER
 bool is_upgrade(fwid_union_t* p_fwid, dfu_type_t dfu_type);
 
+int compare_app_id(app_id_t* p_app_id1, app_id_t* p_app_id2);
+
+bool app_is_older(app_id_t* p_app_id);
+
 bool app_is_newer(app_id_t* p_app_id);
+
+int compare_bootloader_id(bl_id_t* p_bl_id1, bl_id_t* p_bl_id2);
+
+bool bootloader_is_older(bl_id_t bl_id);
 
 bool bootloader_is_newer(bl_id_t bl_id);
 

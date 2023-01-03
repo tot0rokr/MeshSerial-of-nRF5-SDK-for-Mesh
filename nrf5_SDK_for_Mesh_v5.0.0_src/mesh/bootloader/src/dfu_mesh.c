@@ -134,6 +134,12 @@ typedef struct
 
 typedef struct
 {
+    fwid_t fwid;
+    bool cached;
+} fwid_cache_entry_t;
+
+typedef struct
+{
     uint16_t segment;
     uint16_t rx_count;
 } req_cache_entry_t;
@@ -143,6 +149,7 @@ typedef struct
 static transaction_t            m_transaction;
 static dfu_state_t              m_state = DFU_STATE_FIND_FWID;
 static bl_info_pointers_t       m_bl_info_pointers;
+static fwid_cache_entry_t       m_fwid_cache;
 static req_cache_entry_t        m_req_cache[REQ_CACHE_SIZE];
 static uint8_t                  m_req_index;
 static uint8_t                  m_tx_slots;
@@ -505,9 +512,10 @@ static void send_bank_notifications(void)
 /********** STATE MACHINE ENTRY POINTS ***********/
 static void start_find_fwid(void)
 {
-    /* beacon_set(BEACON_TYPE_FWID); */
-    SET_STATE(DFU_STATE_FIND_FWID);
+    memset(&m_fwid_cache, 0, sizeof(m_fwid_cache));
     memset(&m_transaction, 0, sizeof(transaction_t));
+    SET_STATE(DFU_STATE_FIND_FWID);
+    beacon_set(BEACON_TYPE_FWID);
 }
 
 static void start_req(dfu_type_t type, fwid_union_t* p_fwid)
@@ -1095,7 +1103,7 @@ static uint32_t handle_state_packet(dfu_packet_t* p_packet)
                 }
             }
             /* Notify about other transfer if the transfer is different from the current, and
-			   it's a new transfer, not a request */
+             * it's a new transfer, not a request */
             else if ((m_transaction.type != p_packet->payload.state.dfu_type ||
                     !fwid_union_id_cmp(
                         &p_packet->payload.state.fwid,
@@ -1134,53 +1142,47 @@ static uint32_t handle_state_packet(dfu_packet_t* p_packet)
 static uint32_t handle_fwid_packet(dfu_packet_t* p_packet)
 {
     uint32_t status;
+    bool relay_on = false;
+    fwid_t* p_packet_fwid = &p_packet->payload.fwid;
 
     if (m_state == DFU_STATE_FIND_FWID)
     {
-        /* always upgrade bootloader first */
-        if (bootloader_is_newer(p_packet->payload.fwid.bootloader))
+        status = NRF_SUCCESS;
+        if (m_fwid_cache.cached)
         {
-            __LOG("\tBootloader upgrade possible\n");
-            bl_evt_t fwid_evt;
-            fwid_evt.type = BL_EVT_TYPE_DFU_NEW_FW;
-            fwid_evt.params.dfu.new_fw.fw_type = DFU_TYPE_BOOTLOADER;
-            fwid_evt.params.dfu.new_fw.fwid.bootloader.id  = p_packet->payload.fwid.bootloader.id;
-            fwid_evt.params.dfu.new_fw.fwid.bootloader.ver = p_packet->payload.fwid.bootloader.ver;
-            fwid_evt.params.dfu.new_fw.state = m_state;
-            status = bootloader_evt_send(&fwid_evt);
-        }
-        else if (app_is_newer(&p_packet->payload.fwid.app))
-        {
-            /* SD shall only be upgraded if a newer version of our app requires a different SD */
-            if (p_packet->payload.fwid.sd != 0xFFFE && p_packet->payload.fwid.sd != m_bl_info_pointers.p_fwid->sd)
+            if (compare_app_id(&p_packet_fwid->app, &m_fwid_cache.fwid.app) == 2 ||
+                compare_bootloader_id(&p_packet_fwid->bootloader, &m_fwid_cache.fwid.bootloader) == 2)
             {
-                __LOG("\tSD upgrade possible\n");
-                bl_evt_t fwid_evt;
-                fwid_evt.type = BL_EVT_TYPE_DFU_NEW_FW;
-                fwid_evt.params.dfu.new_fw.fw_type = DFU_TYPE_SD;
-                fwid_evt.params.dfu.new_fw.fwid.sd = p_packet->payload.fwid.sd;
-                fwid_evt.params.dfu.new_fw.state = m_state;
-                status = bootloader_evt_send(&fwid_evt);
-            }
-            else
-            {
-                __LOG("\tApp upgrade possible\n");
-                bl_evt_t fwid_evt;
-                fwid_evt.type = BL_EVT_TYPE_DFU_NEW_FW;
-                fwid_evt.params.dfu.new_fw.fw_type = DFU_TYPE_APP;
-                fwid_evt.params.dfu.new_fw.state = m_state;
-                memcpy(&fwid_evt.params.dfu.new_fw.fwid.app, &p_packet->payload.fwid.app, sizeof(app_id_t));
-                status = bootloader_evt_send(&fwid_evt);
+                m_fwid_cache.fwid = *p_packet_fwid;
+                relay_on = true;
             }
         }
         else
         {
-            status = NRF_ERROR_INVALID_DATA;
+            if (app_is_older(&p_packet_fwid->app) ||
+                bootloader_is_older(p_packet_fwid->bootloader))
+            {
+                m_fwid_cache.fwid = *p_packet_fwid;
+                relay_on = true;
+                m_fwid_cache.cached = true;
+            }
+            else if (app_is_newer(&p_packet_fwid->app) ||
+                     bootloader_is_newer(p_packet_fwid->bootloader))
+            {
+                bl_info_entry_t* p_fwid_entry = bootloader_info_entry_get(BL_INFO_TYPE_VERSION);
+                m_fwid_cache.fwid = p_fwid_entry->version;
+                relay_on = true;
+                m_fwid_cache.cached = true;
+            }
         }
     }
     else
     {
         status = NRF_ERROR_INVALID_STATE;
+    }
+    if (relay_on)
+    {
+        status = relay_packet(p_packet, DFU_PACKET_LEN_FWID);
     }
     return status;
 }
@@ -1303,6 +1305,7 @@ void dfu_mesh_init(uint8_t tx_slots)
     SET_STATE(DFU_STATE_INITIALIZED);
     memset(&m_transaction, 0, sizeof(transaction_t));
     memset(m_req_cache, 0, REQ_CACHE_SIZE * sizeof(m_req_cache[0]));
+    memset(&m_fwid_cache, 0, sizeof(m_fwid_cache));
     m_req_index = 0;
     m_tx_slots = tx_slots;
 
@@ -1313,6 +1316,7 @@ void dfu_mesh_start(void)
 {
     memset(&m_transaction, 0, sizeof(transaction_t));
     memset(m_req_cache, 0, sizeof(req_cache_entry_t) * REQ_CACHE_SIZE);
+    memset(&m_fwid_cache, 0, sizeof(m_fwid_cache));
     m_req_index = 0;
     memset(m_data_req_segments, 0, sizeof(uint16_t) * REQ_SEGMENT_SIZE);
     get_info_pointers();

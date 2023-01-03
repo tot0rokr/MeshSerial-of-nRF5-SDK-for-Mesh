@@ -565,6 +565,21 @@ static uint32_t dfu_evt_handler(const bl_evt_t* p_evt)
                         p_evt->params.tx.radio.p_dfu_packet->payload.data.segment
                      );
                 }
+                else if (p_evt->params.tx.radio.p_dfu_packet->packet_type == 0xFFFE)
+                {
+                    __LOG(LOG_SRC_DFU, LOG_LEVEL_INFO, "\tRADIO TX! SLOT %d, count %d, interval: %s, handle: %x, sd: %x, bl: %x-%x, app: %x-%x-%x\n",
+                        p_evt->params.tx.radio.tx_slot,
+                        p_evt->params.tx.radio.tx_count,
+                        p_evt->params.tx.radio.interval_type == BL_RADIO_INTERVAL_TYPE_EXPONENTIAL ? "exponential" : "periodic",
+                        p_evt->params.tx.radio.p_dfu_packet->packet_type,
+                        p_evt->params.tx.radio.p_dfu_packet->payload.fwid.sd,
+                        p_evt->params.tx.radio.p_dfu_packet->payload.fwid.bootloader.bl_id,
+                        p_evt->params.tx.radio.p_dfu_packet->payload.fwid.bootloader.bl_version,
+                        p_evt->params.tx.radio.p_dfu_packet->payload.fwid.app.company_id,
+                        p_evt->params.tx.radio.p_dfu_packet->payload.fwid.app.app_id,
+                        p_evt->params.tx.radio.p_dfu_packet->payload.fwid.app.app_version
+                     );
+                }
                 else
                 {
                     __LOG(LOG_SRC_DFU, LOG_LEVEL_INFO, "\tRADIO TX! SLOT %d, count %d, interval: %s, handle: %x\n",
