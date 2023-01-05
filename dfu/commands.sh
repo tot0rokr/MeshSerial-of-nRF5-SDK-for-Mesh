@@ -94,7 +94,7 @@ if [ "$1" == "dfu_archive" ]; then
                     echo "bootloader id should be a number."
                     exit 1
                 fi
-                cmd="$cmd --bootloader $2 --bootloader-id $3"
+                cmd="$cmd --bootloader $2 --bootloader-id $(($3 * 256 | 0x01))"
                 shift 3
                 ;;
             "-a"|"--application")
