@@ -1376,6 +1376,24 @@ uint32_t dfu_mesh_relay(dfu_type_t type, fwid_union_t* p_fwid, uint32_t transact
 
     __LOG("Relay transfer of %s (TID=0x%x)\n", m_dfu_type_strs[type], transaction_id);
 
+    switch(type)
+    {
+    case DFU_TYPE_SD:
+        m_fwid_cache.fwid.sd = p_fwid->sd;
+        m_fwid_cache.cached = true;
+        break;
+    case DFU_TYPE_BOOTLOADER:
+        m_fwid_cache.fwid.bootloader = p_fwid->bootloader;
+        m_fwid_cache.cached = true;
+        break;
+    case DFU_TYPE_APP:
+        m_fwid_cache.fwid.app = p_fwid->app;
+        m_fwid_cache.cached = true;
+        break;
+    default:
+        break;
+    }
+
     SET_STATE(DFU_STATE_RELAY_CANDIDATE);
     m_transaction.type = type;
     m_transaction.transaction_id = transaction_id;
