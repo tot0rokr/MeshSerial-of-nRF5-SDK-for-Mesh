@@ -3,7 +3,9 @@
 ## Version
 
 - dfu_v0.0: Nordic에서 개발
-- dfu_v1.0: V0.0보다 안정성을 10x 개선
+- dfu_v1.0: v0.0보다 안정성을 10x 개선
+- dfu_v1.1: dfu 실패 fwid 전송 및 릴레이
+- dfu_v1.2: 서로 다른 firmware 간의 dfu 실패 릴레이
 
 ## Usage
 
