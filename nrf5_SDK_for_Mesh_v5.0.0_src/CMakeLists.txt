@@ -47,6 +47,7 @@ include("${CMAKE_CONFIG_DIR}/Platform.cmake")
 include("${CMAKE_CONFIG_DIR}/SoftDevice.cmake")
 include("${CMAKE_CONFIG_DIR}/FindDependency.cmake")
 include("${CMAKE_CONFIG_DIR}/FindSDK.cmake")
+include("${CMAKE_CONFIG_DIR}/DFU.cmake")
 
 # We have to return manually from here s.t. the CMake generation
 # doesn't stop and we have the nRF5_SDK target available.
