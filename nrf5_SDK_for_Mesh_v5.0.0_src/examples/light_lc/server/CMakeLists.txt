@@ -1,4 +1,5 @@
 set(target "light_lc_server_${PLATFORM}_${SOFTDEVICE}")
+include("${CMAKE_SOURCE_DIR}/examples/dfu_module/DFU_module.cmake")
 
 add_executable(${target}
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c"
@@ -32,7 +33,9 @@ add_executable(${target}
     ${PROV_BEARER_ADV_SOURCE_FILES}
     ${PROV_BEARER_GATT_SOURCE_FILES}
     ${${PLATFORM}_SOURCE_FILES}
-    ${${nRF5_SDK_VERSION}_SOURCE_FILES})
+    ${${nRF5_SDK_VERSION}_SOURCE_FILES}
+    ${DFU_MODULE_FILES}
+    )
 
 target_include_directories(${target} PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
@@ -53,7 +56,9 @@ target_include_directories(${target} PUBLIC
     ${${SOFTDEVICE}_INCLUDE_DIRS}
     ${${PLATFORM}_INCLUDE_DIRS}
     ${${BOARD}_INCLUDE_DIRS}
-    ${${nRF5_SDK_VERSION}_INCLUDE_DIRS})
+    ${${nRF5_SDK_VERSION}_INCLUDE_DIRS}
+    ${DFU_MODULE_INCLUDE_DIRECTORIES}
+    )
 
 set_target_link_options(${target}
     ${CMAKE_CURRENT_SOURCE_DIR}/linker/${PLATFORM}_${SOFTDEVICE})
@@ -68,6 +73,8 @@ target_compile_definitions(${target} PUBLIC
     ${${PLATFORM}_DEFINES}
     ${${SOFTDEVICE}_DEFINES}
     ${${BOARD}_DEFINES})
+
+dfu_module_target_compile_definitions()
 
 target_link_libraries(${target}
     rtt_${PLATFORM}
@@ -86,5 +93,6 @@ add_pc_lint(no_scene_${target}
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c"
     "${target_include_dirs}"
     "${${PLATFORM}_DEFINES};${${SOFTDEVICE}_DEFINES};${${BOARD}_DEFINES};-DSCENE_SETUP_SERVER_INSTANCES_MAX=0")
+dfu_module_add_pc_lint()
 
 add_ses_project(${target})

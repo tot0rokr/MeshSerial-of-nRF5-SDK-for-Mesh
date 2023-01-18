@@ -73,6 +73,7 @@
 #include "ble_softdevice_support.h"
 #include "app_timer.h"
 #include "app_scene.h"
+#include "dfu_module.h"
 
 /*****************************************************************************
  * Definitions
@@ -394,12 +395,15 @@ static void mesh_init(void)
         default:
             APP_ERROR_CHECK(status);
     }
+
+    dfu_module_mesh_init();
 }
 
 static void initialize(void)
 {
-    __LOG_INIT(LOG_SRC_APP | LOG_SRC_ACCESS, LOG_LEVEL_INFO, LOG_CALLBACK_DEFAULT);
+    __LOG_INIT(DFU_MODULE_DEFAULT_LOG_MSK | LOG_SRC_APP | LOG_SRC_ACCESS, LOG_LEVEL_INFO, LOG_CALLBACK_DEFAULT);
     __LOG(LOG_SRC_APP, LOG_LEVEL_INFO, "----- BLE Mesh LC Server Demo -----\n");
+    dfu_module_initialize();
 
     pwm_utils_enable(&m_pwm);
     APP_ERROR_CHECK(app_timer_init());
@@ -435,6 +439,8 @@ static void start(void)
     {
         unicast_address_print();
     }
+
+    dfu_module_start();
 
     mesh_app_uuid_print(nrf_mesh_configure_device_uuid_get());
 
