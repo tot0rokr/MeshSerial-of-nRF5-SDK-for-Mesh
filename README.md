@@ -2,16 +2,21 @@
 
 ## Version
 
-- dfu_v0.0: Nordic에서 개발
-- dfu_v1.0: v0.0보다 안정성을 10x 개선
-- dfu_v1.1: dfu 실패 fwid 전송 및 릴레이
-- dfu_v1.2: 서로 다른 firmware 간의 dfu 실패 릴레이
+|버전|내용|
+|:--:|----|
+|dfu_v0.0|Nordic에서 개발|
+|dfu_v1.0|v0.0보다 안정성을 10x 개선|
+|dfu_v1.1|dfu 실패 fwid 전송 및 릴레이|
+|dfu_v1.2|서로 다른 firmware 간의 dfu 실패 릴레이|
+|dfu_v1.3|DFU 모듈화|
 
 ## Usage
 
 [자세한 설명은 이곳을 보세요][문서]
 
 [문서]: https://neostack.atlassian.net/wiki/spaces/MES/pages/121634846?atlOrigin=eyJpIjoiODIyZDExMDIzYTc4NDJhODljY2YyMGU4YzY0ODA3YjgiLCJwIjoiYyJ9
+
+Application에 DFU 기능을 추가하려면 [이 문서를 보세요](nrf5_SDK_for_Mesh_v5.0.0_src/examples/dfu_module/README.md)
 
 ### Example
 
